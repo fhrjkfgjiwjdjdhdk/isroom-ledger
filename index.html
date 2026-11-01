@@ -228,23 +228,29 @@ const ACTIONS = [
   { id: 'course', label: '課程收款', sub: '先收全額', quick: true },
   { id: 'expense', label: '支出', sub: '運費・樣品・個人', quick: true },
   { id: 'consign', label: '代售', sub: '寄賣品牌賣出', quick: true },
-  { id: 'send', label: '寄售送貨' }, { id: 'recon', label: '寄售對帳' }, { id: 'split', label: '分裝' },
-  { id: 'monthly', label: '月初分錢' }, { id: 'gift', label: '公關出庫' }, { id: 'transfer', label: '轉帳' },
-  { id: 'adjust', label: '庫存調整' }
+  { id: 'send', label: '寄售送貨', sec: 'goods' }, { id: 'recon', label: '寄售對帳', sec: 'goods' }, { id: 'split', label: '分裝', sec: 'goods' },
+  { id: 'gift', label: '公關出庫', sec: 'goods' }, { id: 'adjust', label: '庫存調整', sec: 'goods' },
+  { id: 'monthly', label: '月初撥存', sub: '每月 1–5 號，依序把錢分好', sec: 'money' },
+  { id: 'bills', label: '繳費', sub: '帳單付出去時，從固定支出預留付', sec: 'money' },
+  { id: 'settle', label: '月底結清', sub: '現金存銀行、撥款、代墊、繳稅', sec: 'money' },
+  { id: 'transfer', label: '其他轉帳', sub: '期初資金、業主投入等', sec: 'money' }
 ];
+// 月初分錢拆成三張卡片：每張只處理自己那一組
+const MGROUP = { monthly: '月初', bills: '繳費', settle: '結清' };
 
 function renderAdd(){
   const q = ACTIONS.filter((a) => a.quick).map((a) => `<button type="button" class="tile ${S.action === a.id ? 'on' : ''}" data-a="act" data-v="${a.id}"><b>${a.label}</b><span>${a.sub}</span></button>`).join('');
-  const sp = ACTIONS.filter((a) => !a.quick).map((a) => chip(S.action === a.id, 'act', a.id, a.label, 'sq')).join('');
+  const goods = ACTIONS.filter((a) => a.sec === 'goods').map((a) => chip(S.action === a.id, 'act', a.id, a.label, 'sq')).join('');
+  const money_ = ACTIONS.filter((a) => a.sec === 'money').map((a) => `<button type="button" class="tile ${S.action === a.id ? 'on' : ''}" data-a="act" data-v="${a.id}"><b>${a.label}</b><span>${a.sub}</span></button>`).join('');
   let form = '';
   if (!S.action) form = `<div class="card" style="text-align:center;color:var(--sub)">選一個情況開始記帳<br>錢或貨經過你的手，當下就記一筆</div>`;
   else form = `<div class="card">${S.editing ? `<div class="hint" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>正在修改：${esc(S.editing.title)}（${esc(S.editing.date)}）<br>儲存後會取代原紀錄</span><button type="button" class="ghost" style="min-height:36px;padding:0 10px;flex:none" data-a="cancelEdit">取消修改</button></div>` : ''}${FORMS[S.action]()}<button type="button" class="save" data-a="save" ${S.busy ? 'disabled' : ''}>${saveLabel()}</button></div>`;
-  return `<div class="sec"><div><p class="lab">常用</p><div class="grid g2">${q}</div></div><div><p class="lab">貨與錢的移動</p><div class="grid g3">${sp}</div></div>${form}</div>`;
+  return `<div class="sec"><div><p class="lab">常用</p><div class="grid g2">${q}</div></div><div><p class="lab">貨品</p><div class="grid g3">${goods}</div></div><div><p class="lab">店內資金</p><div class="grid g2">${money_}</div></div>${form}</div>`;
 }
 function saveLabel(){
   if (S.busy) return '記錄中…';
   if (S.editing) return '儲存修改';
-  if (S.action === 'monthly') { const f = S.F.monthly; const n = S.B.monthItems.filter((x) => f.ticks[x.key] && num(f.amounts[x.key]) > 0).length; return '依序記下勾選的 ' + n + ' 筆'; }
+  if (MGROUP[S.action]) { const f = S.F.monthly; const n = S.B.monthItems.filter((x) => x.group === MGROUP[S.action] && f.ticks[x.key] && num(f.amounts[x.key]) > 0).length; return n ? '記下勾選的 ' + n + ' 筆' : '請先勾選要記的項目'; }
   if (S.action === 'send') { const n = Object.values(S.F.send.q).reduce((a, b) => a + b, 0); return '送出這批（' + n + ' 件）'; }
   return '記下這筆';
 }
@@ -267,9 +273,9 @@ const FORMS = {
       promo = `<div class="promo"><div><div class="t">進行中的活動</div><b>${esc(pr.name)}</b><div class="lab" style="margin:0">${esc(pr.start)} – ${esc(pr.end)}・${esc(pr.mode)}</div></div>${body}</div>`;
     }
     const total = f.cart.reduce((t, l) => t + (prod(l.id).price || 0) * l.qty, 0);
-    const payAccs = f.channel === '官網' ? `<p class="lab">官網訂單的錢先記在「官網平台待撥款」，撥款進銀行時用「月初分錢 › 官網平台撥款」記。</p>` :
+    const payAccs = f.channel === '官網' ? `<p class="lab">官網訂單的錢先記在「官網平台待撥款」，撥款進銀行時用「月底結清 › 官網平台撥款」記。</p>` :
       `<div><p class="lab">收款方式</p><div class="chips">${accounts().filter((a) => ['收款','營運','個人'].indexOf(a.kind) > -1 && a.name !== '官網平台待撥款').map((a) => chip(f.account === a.name, 'set', 'sale.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>`;
-    const warn = f.channel === '店內' && accScope(f.account) === '個人' ? `<div class="hint">店的收入進了個人帳戶，會記成「代收」。之後轉回公司戶時，用「轉帳 › 代收款轉回」。</div>` : '';
+    const warn = f.channel === '店內' && accScope(f.account) === '個人' ? `<div class="hint">店的收入進了個人帳戶，會記成「代收」。之後轉回公司戶時，用「其他轉帳 › 代收款轉回」。</div>` : '';
     return `<h3>商品銷售</h3>
       <div class="grid g2">${chip(f.channel === '店內', 'set', 'sale.channel|店內', '店內', 'sq')}${chip(f.channel === '官網', 'set', 'sale.channel|官網', '官網訂單', 'sq')}</div>
       <div class="grid g4">${ALLCATS.map((c) => chip(f.cat === c, 'set', 'sale.cat|' + c, c, 'sq')).join('')}</div>
@@ -384,30 +390,9 @@ const FORMS = {
       <div class="sum"><span class="lab" style="margin:0">庫存照扣，不算收入。跟著銷售送的贈品，請在「商品銷售」裡選，不要在這裡記。</span></div>
       ${dateNote(f, 'gift')}`;
   },
-  monthly(){
-    if (!S.F.monthly) initMonthly();
-    const f = S.F.monthly;
-    const m = Number(f.date.slice(5, 7));
-    const row = (x, i) => { const on = !!f.ticks[x.key]; const due = x.group === '月初' ? '' : !x.months.length ? (x.group === '繳費' ? '<span class="tag">每月</span>' : '') : x.months.indexOf(m) > -1 ? '<span class="tag w">本月要繳</span>' : `<span class="tag">${x.months.join('、')} 月繳</span>`;
-      const route = x.kind === '轉帳' ? `${x.from} → ${x.to}` : `${x.from} 付出`;
-      const changed = num(f.amounts[x.key]) !== num(x.def) ? `・預設 ${money(x.def)}` : '';
-      return `<div class="mi ${on ? 'on' : ''}"><button type="button" class="tick ${on ? 'on' : ''}" data-a="mtick" data-v="${x.key}" aria-label="${on ? '取消' : ''}勾選 ${esc(x.label)}">${on ? '✓' : (x.group === '月初' ? i + 1 : '')}</button>
-        <span class="nm"><b>${esc(x.label)}${due}</b><small>${esc(route)}${changed}</small></span>
-        <label><span class="sr">${esc(x.label)} 金額</span><input class="amt" id="m.${x.key}" data-in="m.${x.key}" type="number" inputmode="numeric" value="${esc(f.amounts[x.key])}"></label>${x.note && (x.group === '月初' || x.key === 'm26') ? `<small class="mnote">${esc(x.note)}</small>` : ''}</div>`; };
-    const g = (name) => S.B.monthItems.filter((x) => x.group === name);
-    const total = g('月初').filter((x) => f.ticks[x.key]).reduce((t, x) => t + num(f.amounts[x.key]), 0);
-    return `<h3>月初分錢（依優先順序）</h3>
-      <p class="lab" style="margin:0">由上往下付，錢不夠時越下面越晚付。金額是預設值，可改成這個月的實際金額。</p>
-      ${g('月初').map(row).join('')}
-      <div class="kv b" style="border-top:1px solid var(--line);padding-top:8px"><span>月初勾選合計</span><span>${money(total)}</span></div>
-      <h3 style="margin-top:6px">繳費：從固定支出預留付出</h3>
-      <p class="lab" style="margin:0">上面的「撥存固定支出」是每月先存進去；這裡是帳單真的付出去時記。每月的帳單、以及本月要繳的勞健保或發票機會自動勾選。帳單不是月初付的話，可以先取消勾選，等付款那天再回來記。</p>
-      ${g('繳費').map((x) => row(x, 0)).join('')}
-      <h3 style="margin-top:6px">月底結清</h3>
-      <p class="lab" style="margin:0">預設金額是目前帳上的餘額或未結清金額。</p>
-      ${g('結清').map((x) => row(x, 0)).join('')}
-      ${field('monthly.date', '日期', inp('monthly.date', 'date', f.date))}`;
-  },
+  monthly(){ return moneyForm('月初', '月初撥存（依優先順序）', '每月 1–5 號做一次。由上往下撥，錢不夠時越下面越晚撥。金額是預設值，可改成這個月的實際金額。', true); },
+  bills(){ return moneyForm('繳費', '繳費：從固定支出預留付出', '帳單真的付出去時才記。每月的帳單、以及這個月要繳的勞健保或發票機會預先勾選；還沒付的先取消勾選，付款那天再回來記。', false); },
+  settle(){ return moneyForm('結清', '月底結清', '需要時再勾選。預設金額是目前帳上的餘額或未結清金額；單月份會標出要繳的營業稅。', false); },
   adjust(){
     const f = S.F.adjust;
     const locs = ['店內', '店內展示'].concat(S.B.stores.map((s) => s.name));
@@ -429,7 +414,7 @@ const FORMS = {
     const cats = ['帳戶間轉帳', '期初資金', '業主投入資金', '代收款轉回', '代墊歸還', '業主薪資提取', '撥存', '代售貨款支付', '營業稅繳納'];
     const accs = accounts();
     const hint = { '期初資金': '新帳戶開好、把現有的錢存進去時用。只填「轉入帳戶」。', '業主投入資金': '從個人存款補錢進店裡。', '代收款轉回': '店的收入之前進了個人帳戶，現在轉回店的帳戶。', '代墊歸還': '店還你之前代墊的錢。', '帳戶間轉帳': '例如現金存銀行、LINE Pay 撥款。', '業主薪資提取': '店發薪水給主理人。', '撥存': '存進稅金、固定支出、原料或耗材預留帳戶。', '代售貨款支付': '付給代售品牌的貨款，只選「轉出帳戶」。', '營業稅繳納': '申報營業稅時繳的錢，通常從「稅金預留」付出，只選「轉出帳戶」。' }[f.category];
-    return `<h3>轉帳</h3>
+    return `<h3>其他轉帳</h3>
       <div class="chips">${cats.map((c) => chip(f.category === c, 'set', 'transfer.category|' + c, c)).join('')}</div>
       <p class="lab" style="margin:0">${esc(hint)}</p>
       ${f.category === '期初資金' ? '' : `<div><p class="lab">轉出帳戶</p><div class="chips">${accs.map((a) => chip(f.from === a.name, 'set', 'transfer.from|' + a.name, esc(a.name))).join('')}</div></div>`}
@@ -438,6 +423,25 @@ const FORMS = {
       ${dateNote(f, 'transfer')}`;
   }
 };
+
+function moneyForm(group, title, desc, numbered){
+  if (!S.F.monthly) initMonthly();
+  const f = S.F.monthly;
+  const m = Number(f.date.slice(5, 7));
+  const items = S.B.monthItems.filter((x) => x.group === group);
+  const row = (x, i) => { const on = !!f.ticks[x.key];
+    const due = group === '月初' ? '' : !x.months.length ? (group === '繳費' ? '<span class="tag">每月</span>' : '') : x.months.indexOf(m) > -1 ? '<span class="tag w">本月要繳</span>' : `<span class="tag">${x.months.join('、')} 月繳</span>`;
+    const route = x.kind === '轉帳' ? `${x.from} → ${x.to}` : `${x.from} 付出`;
+    const changed = num(f.amounts[x.key]) !== num(x.def) ? `・預設 ${money(x.def)}` : '';
+    return `<div class="mi ${on ? 'on' : ''}"><button type="button" class="tick ${on ? 'on' : ''}" data-a="mtick" data-v="${x.key}" aria-label="${on ? '取消' : ''}勾選 ${esc(x.label)}">${on ? '✓' : (numbered ? i + 1 : '')}</button>
+      <span class="nm"><b>${esc(x.label)}${due}</b><small>${esc(route)}${changed}</small></span>
+      <label><span class="sr">${esc(x.label)} 金額</span><input class="amt" id="m.${x.key}" data-in="m.${x.key}" type="number" inputmode="numeric" value="${esc(f.amounts[x.key])}"></label>${x.note && group !== '繳費' ? `<small class="mnote">${esc(x.note)}</small>` : ''}</div>`; };
+  const total = items.filter((x) => f.ticks[x.key]).reduce((t, x) => t + num(f.amounts[x.key]), 0);
+  return `<h3>${title}</h3><p class="lab" style="margin:0">${desc}</p>
+    ${items.map(row).join('')}
+    <div class="kv b" style="border-top:1px solid var(--line);padding-top:8px"><span>勾選合計</span><span>${money(total)}</span></div>
+    ${field('monthly.date', '日期', inp('monthly.date', 'date', f.date))}`;
+}
 
 /* ───────── 送出 ───────── */
 function payload(){
@@ -450,7 +454,7 @@ function payload(){
   if (a === 'recon') { const f = F.recon; return f.mode === '收款' ? { action: 'reconPay', date: f.date, note: f.note, store: f.store, salesMonth: f.salesMonth, amount: f.amount, account: f.account } : { action: 'recon', date: f.date, note: f.note, store: f.store, salesMonth: f.salesMonth, lines: Object.keys(f.q).map((id) => ({ id, qty: f.q[id] })) }; }
   if (a === 'split') { const f = F.split; return { action: 'split', date: f.date, note: f.note, series: f.series, opens: Object.keys(f.open).map((id) => ({ id, bad: f.open[id].bad, good: f.open[id].good, show: f.show[id] || 0 })), made: Object.keys(f.made).map((id) => ({ id, qty: f.made[id] })) }; }
   if (a === 'gift') { const f = F.gift; return { action: 'gift', date: f.date, note: f.note, party: f.party, lines: Object.keys(f.q).map((id) => ({ id, qty: f.q[id] })) }; }
-  if (a === 'monthly') { const f = F.monthly; return { action: 'transfers', date: f.date, items: S.B.monthItems.filter((x) => f.ticks[x.key] && num(f.amounts[x.key]) > 0).map((x) => ({ key: x.key, amount: f.amounts[x.key] })) }; }
+  if (MGROUP[a]) { const f = F.monthly; return { action: 'transfers', date: f.date, items: S.B.monthItems.filter((x) => x.group === MGROUP[a] && f.ticks[x.key] && num(f.amounts[x.key]) > 0).map((x) => ({ key: x.key, amount: f.amounts[x.key] })) }; }
   if (a === 'adjust') { const f = F.adjust; return { action: 'adjust', date: f.date, note: f.note, loc: f.loc, state: f.state, lines: Object.keys(f.q).map((id) => ({ id, qty: f.q[id] })) }; }
   if (a === 'transfer') { const f = F.transfer; return { action: 'transfer', date: f.date, note: f.note, category: f.category, from: f.from, to: f.to, amount: f.amount }; }
 }
@@ -466,7 +470,7 @@ async function save(){
     if (wasEdit) { S.editing = null; S.action = ''; S.tab = 'list'; S.openEntry = ''; }
     const keep = S.action;
     await boot(true);
-    initForms(); if (keep === 'monthly') S.F.monthly = null;
+    initForms(); if (MGROUP[keep]) S.F.monthly = null;
     S.items = null; S.summary = null;
   } catch(e){ toast(e.message); }
   S.busy = false; render();
@@ -620,7 +624,7 @@ function vatCard(s){
       <div class="kv s"><span>本月 15 日前申報${v.paidThisMonth ? '，已繳 ' + money(v.paidThisMonth) : '，尚未記繳納'}</span><span></span></div>` : ''}
     <div class="kv tot"><span>稅金預留目前</span><span>${money(v.reserve)}</span></div>
     <div class="kv b ${ok ? 'in-c' : 'out-c'}"><span>${ok ? '足夠，多出' : '還差'}</span><span>${money(Math.abs(v.gap))}</span></div>
-    <p class="lab" style="margin:2px 0 0">應提稅金＝收入裡含的 5% 營業稅，還沒扣掉進貨、房租等有統編發票的進項稅額，所以實際要繳的通常會少一些。繳稅時用「月初分錢 › 繳營業稅」或「轉帳 › 營業稅繳納」記。</p>
+    <p class="lab" style="margin:2px 0 0">應提稅金＝收入裡含的 5% 營業稅，還沒扣掉進貨、房租等有統編發票的進項稅額，所以實際要繳的通常會少一些。繳稅時用「月底結清 › 繳營業稅」或「其他轉帳 › 營業稅繳納」記。</p>
   </div>`;
 }
 async function loadSummary(){ try { const d = await api({ action: 'summary', month: S.month }); S.summary = d.summary; } catch(e){ toast(e.message); S.summary = { month: S.month, error: true }; } render(); }
@@ -667,7 +671,7 @@ function setPath(path, val){
 const bump = (obj, id, d) => { obj[id] = Math.max(0, (obj[id] || 0) + d); if (!obj[id]) delete obj[id]; };
 const H = {
   tab(v){ S.tab = v; if (v === 'list') S.items = null; if (v === 'report') S.summary = null; render(); },
-  act(v){ if (S.editing && v !== S.action) { S.editing = null; initForms(); toast('已取消修改'); } S.action = S.action === v ? '' : v; if (v === 'monthly' && !S.F.monthly) initMonthly(); render(); },
+  act(v){ if (S.editing && v !== S.action) { S.editing = null; initForms(); toast('已取消修改'); } S.action = S.action === v ? '' : v; if (MGROUP[v] && !S.F.monthly) initMonthly(); render(); },
   set(v){ const i = v.indexOf('|'); setPath(v.slice(0, i), v.slice(i + 1)); render(); },
   // 用位置選，不用名稱比對：名稱裡有隱藏換行時也不會選不到
   pickIdx(v){ const [path, list, i] = v.split('|'); const item = (S.B[list] || [])[+i]; if (item) setPath(path, item.name); render(); },
