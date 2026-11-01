@@ -65,6 +65,7 @@ input.amt{width:104px;text-align:right;font-variant-numeric:tabular-nums}
 .tick{width:32px;height:32px;flex:none;border-radius:8px;border:1px solid #A9BBCB;background:#fff;color:var(--sub);font-size:13px;font-weight:700}
 .tick.on{background:var(--blue);border-color:var(--blue);color:#fff}
 .mi{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:#fff;border:1px solid #EEF2F5}
+.mi{flex-wrap:wrap}.mnote{flex-basis:100%;padding:2px 0 0 42px;font-size:11px;line-height:1.6;color:var(--sub)}
 .mi.on{background:#F2F6F9}.mi:not(.on){opacity:.8}
 .mi .nm{flex:1;min-width:0;display:flex;flex-direction:column}.mi .nm small{font-size:11px;color:var(--sub)}
 .tag{display:inline-block;font-size:11px;font-weight:500;border-radius:4px;padding:1px 6px;margin-left:4px;background:var(--pale);color:var(--blue);vertical-align:1px}
@@ -160,7 +161,7 @@ function initMonthly(){
   const amounts = {}, ticks = {};
   S.B.monthItems.forEach((x) => {
     amounts[x.key] = x.def;
-    ticks[x.key] = x.group === '月初' ? true : x.group === '到期' ? x.months.indexOf(m) > -1 : false;
+    ticks[x.key] = x.group === '月初' ? true : x.group === '繳費' ? (!x.months.length || x.months.indexOf(m) > -1) : false;
   });
   S.F.monthly = { amounts, ticks, date: today() };
 }
@@ -387,21 +388,21 @@ const FORMS = {
     if (!S.F.monthly) initMonthly();
     const f = S.F.monthly;
     const m = Number(f.date.slice(5, 7));
-    const row = (x, i) => { const on = !!f.ticks[x.key]; const due = x.group === '到期' ? (x.months.indexOf(m) > -1 ? '<span class="tag w">本月到期</span>' : `<span class="tag">${x.months.join('、')} 月</span>`) : '';
+    const row = (x, i) => { const on = !!f.ticks[x.key]; const due = x.group === '月初' ? '' : !x.months.length ? (x.group === '繳費' ? '<span class="tag">每月</span>' : '') : x.months.indexOf(m) > -1 ? '<span class="tag w">本月要繳</span>' : `<span class="tag">${x.months.join('、')} 月繳</span>`;
       const route = x.kind === '轉帳' ? `${x.from} → ${x.to}` : `${x.from} 付出`;
       const changed = num(f.amounts[x.key]) !== num(x.def) ? `・預設 ${money(x.def)}` : '';
       return `<div class="mi ${on ? 'on' : ''}"><button type="button" class="tick ${on ? 'on' : ''}" data-a="mtick" data-v="${x.key}" aria-label="${on ? '取消' : ''}勾選 ${esc(x.label)}">${on ? '✓' : (x.group === '月初' ? i + 1 : '')}</button>
         <span class="nm"><b>${esc(x.label)}${due}</b><small>${esc(route)}${changed}</small></span>
-        <label><span class="sr">${esc(x.label)} 金額</span><input class="amt" id="m.${x.key}" data-in="m.${x.key}" type="number" inputmode="numeric" value="${esc(f.amounts[x.key])}"></label></div>`; };
+        <label><span class="sr">${esc(x.label)} 金額</span><input class="amt" id="m.${x.key}" data-in="m.${x.key}" type="number" inputmode="numeric" value="${esc(f.amounts[x.key])}"></label>${x.note && (x.group === '月初' || x.key === 'm26') ? `<small class="mnote">${esc(x.note)}</small>` : ''}</div>`; };
     const g = (name) => S.B.monthItems.filter((x) => x.group === name);
     const total = g('月初').filter((x) => f.ticks[x.key]).reduce((t, x) => t + num(f.amounts[x.key]), 0);
     return `<h3>月初分錢（依優先順序）</h3>
       <p class="lab" style="margin:0">由上往下付，錢不夠時越下面越晚付。金額是預設值，可改成這個月的實際金額。</p>
       ${g('月初').map(row).join('')}
       <div class="kv b" style="border-top:1px solid var(--line);padding-top:8px"><span>月初勾選合計</span><span>${money(total)}</span></div>
-      <h3 style="margin-top:6px">到期才付：從定期費用預留付出</h3>
-      <p class="lab" style="margin:0">上面的「撥存定期費用」是每月存進去，這裡是到期時付出去。到期月份會自動勾選。</p>
-      ${g('到期').map((x) => row(x, 0)).join('')}
+      <h3 style="margin-top:6px">繳費：從固定支出預留付出</h3>
+      <p class="lab" style="margin:0">上面的「撥存固定支出」是每月先存進去；這裡是帳單真的付出去時記。每月的帳單、以及本月要繳的勞健保或發票機會自動勾選。帳單不是月初付的話，可以先取消勾選，等付款那天再回來記。</p>
+      ${g('繳費').map((x) => row(x, 0)).join('')}
       <h3 style="margin-top:6px">月底結清</h3>
       <p class="lab" style="margin:0">預設金額是目前帳上的餘額或未結清金額。</p>
       ${g('結清').map((x) => row(x, 0)).join('')}
@@ -425,14 +426,14 @@ const FORMS = {
   },
   transfer(){
     const f = S.F.transfer;
-    const cats = ['帳戶間轉帳', '期初資金', '業主投入資金', '代收款轉回', '代墊歸還', '業主薪資提取', '撥存', '代售貨款支付'];
+    const cats = ['帳戶間轉帳', '期初資金', '業主投入資金', '代收款轉回', '代墊歸還', '業主薪資提取', '撥存', '代售貨款支付', '營業稅繳納'];
     const accs = accounts();
-    const hint = { '期初資金': '新帳戶開好、把現有的錢存進去時用。只填「轉入帳戶」。', '業主投入資金': '從個人存款補錢進店裡。', '代收款轉回': '店的收入之前進了個人帳戶，現在轉回店的帳戶。', '代墊歸還': '店還你之前代墊的錢。', '帳戶間轉帳': '例如現金存銀行、LINE Pay 撥款。', '業主薪資提取': '店發薪水給主理人。', '撥存': '存進稅金、定期費用、原料或耗材預留帳戶。', '代售貨款支付': '付給代售品牌的貨款，只選「轉出帳戶」。' }[f.category];
+    const hint = { '期初資金': '新帳戶開好、把現有的錢存進去時用。只填「轉入帳戶」。', '業主投入資金': '從個人存款補錢進店裡。', '代收款轉回': '店的收入之前進了個人帳戶，現在轉回店的帳戶。', '代墊歸還': '店還你之前代墊的錢。', '帳戶間轉帳': '例如現金存銀行、LINE Pay 撥款。', '業主薪資提取': '店發薪水給主理人。', '撥存': '存進稅金、固定支出、原料或耗材預留帳戶。', '代售貨款支付': '付給代售品牌的貨款，只選「轉出帳戶」。', '營業稅繳納': '申報營業稅時繳的錢，通常從「稅金預留」付出，只選「轉出帳戶」。' }[f.category];
     return `<h3>轉帳</h3>
       <div class="chips">${cats.map((c) => chip(f.category === c, 'set', 'transfer.category|' + c, c)).join('')}</div>
       <p class="lab" style="margin:0">${esc(hint)}</p>
       ${f.category === '期初資金' ? '' : `<div><p class="lab">轉出帳戶</p><div class="chips">${accs.map((a) => chip(f.from === a.name, 'set', 'transfer.from|' + a.name, esc(a.name))).join('')}</div></div>`}
-      ${f.category === '代售貨款支付' ? '' : `<div><p class="lab">轉入帳戶</p><div class="chips">${accs.map((a) => chip(f.to === a.name, 'set', 'transfer.to|' + a.name, esc(a.name))).join('')}</div></div>`}
+      ${f.category === '代售貨款支付' || f.category === '營業稅繳納' ? '' : `<div><p class="lab">轉入帳戶</p><div class="chips">${accs.map((a) => chip(f.to === a.name, 'set', 'transfer.to|' + a.name, esc(a.name))).join('')}</div></div>`}
       ${field('transfer.amount', '金額', inp('transfer.amount', 'number', f.amount, 'big', '0'))}
       ${dateNote(f, 'transfer')}`;
   }
@@ -598,10 +599,28 @@ function renderReport(){
     <div class="card" style="gap:8px"><p class="lab" style="margin:0">打平線：固定支出＋薪水＋撥存 ${money(s.breakevenTarget)}</p><div class="bar"><i style="width:${pct}%"></i></div><div class="kv"><span>扣掉抽成、成本、零碎費用後 ${money(s.breakevenActual)}</span><span class="${s.breakevenActual >= s.breakevenTarget ? 'in-c' : 'out-c'}">${s.breakevenActual >= s.breakevenTarget ? '已達成' : '還差 ' + money(s.breakevenTarget - s.breakevenActual)}</span></div></div>
     <div class="card" style="gap:8px"><p class="lab" style="margin:0">第二批原料預留：目標 ${money(s.batch.target)}</p><div class="bar"><i style="width:${bp}%;background:var(--blue)"></i></div><div class="kv"><span>已存 ${money(s.batch.saved)}</span><span>還差 ${money(Math.max(0, s.batch.target - s.batch.saved))}</span></div></div>
     ${promos}
-    <div class="card" style="gap:6px"><p class="lab" style="margin:0">帳戶裡，但不能動的錢</p>${kv('預收課程款（還沒上課）', s.held.prepaid)}${kv('代售應付（品牌的錢）', s.held.payable)}${kv('稅金預留', s.held.taxReserve)}<div class="kv s"><span>本月應提營業稅</span><span>${money(s.tax)}</span></div></div>
+    ${vatCard(s)}
+    <div class="card" style="gap:6px"><p class="lab" style="margin:0">帳戶裡，但不能動的錢</p>${kv('預收課程款（還沒上課）', s.held.prepaid)}${kv('代售應付（品牌的錢）', s.held.payable)}${kv('稅金預留', s.held.taxReserve)}</div>
     ${pend.length ? `<div class="card" style="gap:6px;background:var(--warnbg);border-color:#EAD9B5"><p class="lab" style="margin:0;color:var(--warn)">待處理</p>${pend.join('')}</div>` : ''}
     <div class="card" style="gap:4px"><p class="lab" style="margin:0">月底帳戶餘額（和銀行、LINE Pay 對一次）</p>${s.balances.map((b) => `<div class="kv"><span>${esc(b.name)}${b.scope === '個人' ? '<span class="tag">個人</span>' : ''}</span><span class="${b.balance < 0 ? 'out-c' : ''}">${money(b.balance)}</span></div>`).join('')}</div>
     ${s.personal ? `<div class="card" style="gap:4px"><p class="lab" style="margin:0">主理人個人支出</p>${kv('合計', s.personal, 'b')}${sub(s.personalBy)}</div>` : ''}
+  </div>`;
+}
+function vatCard(s){
+  const v = s.vat; if (!v) return '';
+  const md = (m) => m.slice(5).replace(/^0/, '');
+  const per = (p) => { const [a, b] = p.split('～'); return a.slice(0, 4) + ' 年 ' + md(a) + '–' + md(b) + ' 月'; };
+  const dl = (d) => d.slice(0, 4) + '/' + d.slice(5, 7) + '/' + d.slice(8);
+  const ok = v.gap >= 0;
+  return `<div class="card" style="gap:6px;font-variant-numeric:tabular-nums">
+    <p class="lab" style="margin:0">本期營業稅（兩個月一期）</p>
+    <div class="kv b"><span>${per(v.period)} 累計應提</span><span>${money(v.accrued)}</span></div>
+    <div class="kv s"><span>這一期在 ${dl(v.deadline)} 前申報</span><span></span></div>
+    ${v.isFiling && (v.prevDue || v.paidThisMonth) ? `<div class="kv" style="margin-top:4px"><span>上一期 ${per(v.prevPeriod)} 應繳</span><span>${money(v.prevDue)}</span></div>
+      <div class="kv s"><span>本月 15 日前申報${v.paidThisMonth ? '，已繳 ' + money(v.paidThisMonth) : '，尚未記繳納'}</span><span></span></div>` : ''}
+    <div class="kv tot"><span>稅金預留目前</span><span>${money(v.reserve)}</span></div>
+    <div class="kv b ${ok ? 'in-c' : 'out-c'}"><span>${ok ? '足夠，多出' : '還差'}</span><span>${money(Math.abs(v.gap))}</span></div>
+    <p class="lab" style="margin:2px 0 0">應提稅金＝收入裡含的 5% 營業稅，還沒扣掉進貨、房租等有統編發票的進項稅額，所以實際要繳的通常會少一些。繳稅時用「月初分錢 › 繳營業稅」或「轉帳 › 營業稅繳納」記。</p>
   </div>`;
 }
 async function loadSummary(){ try { const d = await api({ action: 'summary', month: S.month }); S.summary = d.summary; } catch(e){ toast(e.message); S.summary = { month: S.month, error: true }; } render(); }
