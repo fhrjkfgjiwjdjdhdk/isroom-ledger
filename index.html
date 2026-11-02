@@ -92,6 +92,9 @@ input,select{max-width:100%;min-width:0}
 input[type=date]{-webkit-appearance:none;appearance:none;display:block;width:100%;min-width:0;max-width:100%;height:44px;line-height:44px;-webkit-min-logical-width:calc(100% - 26px)}
 input[type=date]::-webkit-date-and-time-value{min-height:1.5em}
 input[type=date]::-webkit-date-and-time-value{text-align:left}
+.is{display:grid;grid-template-columns:minmax(0,1fr) 36px 36px 36px 44px;gap:4px;align-items:center;font-size:13px;font-variant-numeric:tabular-nums;padding:5px 0;border-bottom:1px solid #EEF2F5}
+.is>span:not(:first-child){text-align:right}.is.h{font-size:11px;color:var(--sub);border-bottom:1px solid var(--line)}.is.t{font-weight:700;border-bottom:0}
+.is .z{color:#A9B6C3}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 </style>
 </head>
@@ -309,7 +312,8 @@ const FORMS = {
       <div><p class="lab">人數</p><div class="grid g4">${[1,2,3,4].map((n) => chip(f.people === n, 'set', 'course.people|' + n, n + ' 人', 'sq')).join('')}</div></div>
       <div class="grid">${field('course.classDate', '上課日期', inp('course.classDate', 'date', f.classDate))}${field('course.amount', auto === null ? '金額（課程未設定價，請手填）' : '金額（預設 ' + money(auto) + '，可改）', inp('course.amount', 'number', f.amount === '' && auto !== null ? auto : f.amount, '', '0'))}</div>
       ${field('course.party', '學員（選填）', inp('course.party', 'text', f.party))}
-      <div><p class="lab">收進哪個帳戶</p><div class="chips">${accounts().filter((a) => ['收款','營運'].indexOf(a.kind) > -1).map((a) => chip(f.account === a.name, 'set', 'course.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>
+      <div><p class="lab">收進哪個帳戶</p><div class="chips">${accounts().filter((a) => (['收款','營運'].indexOf(a.kind) > -1 && a.name !== '官網平台待撥款') || a.name === '個人帳戶').map((a) => chip(f.account === a.name, 'set', 'course.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>
+      ${accScope(f.account) === '個人' ? `<div class="hint">課程費匯進個人帳戶，會記成「代收」。之後轉回公司戶時，用「其他轉帳 › 代收款轉回」。</div>` : ''}
       <div class="sum"><span class="lab" style="margin:0" id="course-note">${esc(note)}</span></div>
       ${dateNote(f, 'course')}`;
   },
@@ -619,8 +623,6 @@ function renderReport(){
   const bp = Math.max(0, Math.min(100, s.batch.saved / s.batch.target * 100));
   const promos = s.promos.length ? s.promos.map((p) => `<div class="card" style="gap:4px"><div style="display:flex;justify-content:space-between"><b>活動：${esc(p.name)}</b></div>${p.sold ? `<div class="kv"><span>活動期間賣出正裝</span><span>${p.sold} 瓶</span></div>` : ''}${Object.keys(p.gifts).map((k) => `<div class="kv ind"><span>贈出 ${esc(k)}</span><span>${p.gifts[k]}</span></div>`).join('')}<div class="kv tot"><span>贈品價值（以售價計，參考）</span><span>${money(p.value)}${p.unpriced ? ' ＋未定價品項' : ''}</span></div></div>`).join('') : '';
   const pend = [];
-  if (s.pending.advance > 0) pend.push(kv('代墊未還', s.pending.advance));
-  if (s.pending.collected > 0) pend.push(kv('代收未轉回', s.pending.collected));
   if (s.pending.receivable > 0) pend.push(kv('寄售應收未收', s.pending.receivable));
   if (s.pending.personalFromShop > 0) pend.push(kv('本月用店帳戶付的個人開銷', s.pending.personalFromShop));
   if (s.pending.missingRecon.length) pend.push(`<div class="kv"><span>本月還沒對帳</span><span>${esc(s.pending.missingRecon.join('、'))}</span></div>`);
@@ -637,11 +639,26 @@ function renderReport(){
     <div class="card" style="gap:8px"><p class="lab" style="margin:0">打平線：固定支出＋薪水＋撥存 ${money(s.breakevenTarget)}</p><div class="bar"><i style="width:${pct}%"></i></div><div class="kv"><span>扣掉抽成、成本、零碎費用後 ${money(s.breakevenActual)}</span><span class="${s.breakevenActual >= s.breakevenTarget ? 'in-c' : 'out-c'}">${s.breakevenActual >= s.breakevenTarget ? '已達成' : '還差 ' + money(s.breakevenTarget - s.breakevenActual)}</span></div></div>
     <div class="card" style="gap:8px"><p class="lab" style="margin:0">第二批原料預留：目標 ${money(s.batch.target)}</p><div class="bar"><i style="width:${bp}%;background:var(--blue)"></i></div><div class="kv"><span>已存 ${money(s.batch.saved)}</span><span>還差 ${money(Math.max(0, s.batch.target - s.batch.saved))}</span></div></div>
     ${promos}
+    ${oweCard(s)}
     ${vatCard(s)}
     <div class="card" style="gap:6px"><p class="lab" style="margin:0">帳戶裡，但不能動的錢</p>${kv('預收課程款（還沒上課）', s.held.prepaid)}${kv('代售應付（品牌的錢）', s.held.payable)}${kv('稅金預留', s.held.taxReserve)}</div>
     ${pend.length ? `<div class="card" style="gap:6px;background:var(--warnbg);border-color:#EAD9B5"><p class="lab" style="margin:0;color:var(--warn)">待處理</p>${pend.join('')}</div>` : ''}
     <div class="card" style="gap:4px"><p class="lab" style="margin:0">月底帳戶餘額（和銀行、LINE Pay 對一次）</p>${s.balances.map((b) => `<div class="kv"><span>${esc(b.name)}${b.scope === '個人' ? '<span class="tag">個人</span>' : ''}</span><span class="${b.balance < 0 ? 'out-c' : ''}">${money(b.balance)}</span></div>`).join('')}</div>
+    ${itemCard(s)}
     ${s.personal ? `<div class="card" style="gap:4px"><p class="lab" style="margin:0">主理人個人支出</p>${kv('合計', s.personal, 'b')}${sub(s.personalBy)}</div>` : ''}
+  </div>`;
+}
+function oweCard(s){
+  const o = s.owe; if (!o || !(o.inPersonal || o.advanced || o.returned || o.repaid)) return '';
+  const head = o.net > 0 ? ['個人帳戶要轉給店', 'out-c'] : o.net < 0 ? ['店要還給個人帳戶', 'out-c'] : ['已經結清', 'in-c'];
+  return `<div class="card" style="gap:6px;font-variant-numeric:tabular-nums;${o.net ? 'border-color:#E0B76A' : ''}">
+    <p class="lab" style="margin:0">個人帳戶與店的往來（累計到 ${s.month.replace('-', '/')} 月底）</p>
+    <div class="kv b ${head[1]}" style="font-size:18px"><span>${head[0]}</span><span>${money(Math.abs(o.net))}</span></div>
+    <div class="kv ind"><span>店的錢進了個人帳戶</span><span>${money(o.inPersonal)}</span></div>
+    <div class="kv ind"><span>個人幫店付的（代墊）</span><span>−${money(o.advanced)}</span></div>
+    ${o.returned ? `<div class="kv ind"><span>已經轉回店裡</span><span>−${money(o.returned)}</span></div>` : ''}
+    ${o.repaid ? `<div class="kv ind"><span>店已經還給個人</span><span>${money(o.repaid)}</span></div>` : ''}
+    <p class="lab" style="margin:2px 0 0">${o.net > 0 ? '公司戶開好後，用「月底結清 › 個人帳戶轉回店裡」記一筆，金額已自動帶好。' : o.net < 0 ? '用「月底結清 › 代墊歸還」記一筆，金額已自動帶好。' : '個人帳戶裡沒有店的錢，也沒有欠個人的錢。'}</p>
   </div>`;
 }
 function vatCard(s){
@@ -660,6 +677,18 @@ function vatCard(s){
     <div class="kv b ${ok ? 'in-c' : 'out-c'}"><span>${ok ? '足夠，多出' : '還差'}</span><span>${money(Math.abs(v.gap))}</span></div>
     <p class="lab" style="margin:2px 0 0">應提稅金＝收入裡含的 5% 營業稅，還沒扣掉進貨、房租等有統編發票的進項稅額，所以實際要繳的通常會少一些。繳稅時用「月底結清 › 繳營業稅」或「其他轉帳 › 營業稅繳納」記。</p>
   </div>`;
+}
+function itemCard(s){
+  if (!s.itemSales) return '';
+  const n = (v) => v ? String(v) : '<span class="z">—</span>';
+  const any = s.itemSales.some((c) => c.total || c.gift);
+  const body = s.itemSales.filter((c) => c.total || c.gift || c.cat === '正裝').map((c) => `
+    <div class="grp" style="margin-top:10px"><span>${esc(c.cat)}</span><span>${money(c.amount)}</span></div>
+    <div class="is h"><span>品項</span><span>店內</span><span>官網</span><span>寄售</span><span>合計</span></div>
+    ${c.rows.map((r) => `<div class="is"><span>${esc(r.name.replace('・單支', ''))}${r.gift ? `<small style="color:var(--sub)">（贈出 ${r.gift}）</small>` : ''}</span><span>${n(r.store)}</span><span>${n(r.web)}</span><span>${n(r.consign)}</span><span><b>${n(r.total)}</b></span></div>`).join('')}
+    <div class="is t"><span>小計${c.gift ? `<small style="color:var(--sub);font-weight:400">（贈出 ${c.gift}）</small>` : ''}</span><span>${n(c.store)}</span><span>${n(c.web)}</span><span>${n(c.consign)}</span><span>${n(c.total)}</span></div>`).join('');
+  return `<div class="card" style="gap:0"><p class="lab" style="margin:0">各品項銷售（件數）</p>${any ? body : '<p class="lab" style="margin:8px 0 0">這個月還沒有銷售紀錄</p>'}
+    <p class="lab" style="margin:10px 0 0">寄售依報表的銷售月份計；贈出包含活動贈品與公關出庫，不算在合計裡。金額為原價合計，未扣折扣。</p></div>`;
 }
 async function loadSummary(){ try { const d = await api({ action: 'summary', month: S.month }); S.summary = d.summary; } catch(e){ toast(e.message); S.summary = { month: S.month, error: true }; } render(); }
 
