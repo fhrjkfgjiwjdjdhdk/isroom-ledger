@@ -254,7 +254,7 @@ const ACTIONS = [
   { id: 'expense', label: '支出', sub: '運費・樣品・個人', quick: true },
   { id: 'consign', label: '代售', sub: '寄賣品牌賣出', quick: true },
   { id: 'send', label: '寄售送貨', sec: 'goods' }, { id: 'recon', label: '寄售對帳', sec: 'goods' }, { id: 'split', label: '分裝', sec: 'goods' },
-  { id: 'gift', label: '公關出庫', sec: 'goods' }, { id: 'adjust', label: '庫存調整', sec: 'goods' },
+  { id: 'gift', label: '贈品・公關品', sec: 'goods' }, { id: 'adjust', label: '庫存調整', sec: 'goods' },
   { id: 'monthly', label: '月初撥存', sub: '每月 1–5 號，依序把錢分好', sec: 'money' },
   { id: 'bills', label: '繳費', sub: '帳單付出去時，從固定支出預留付', sec: 'money' },
   { id: 'settleIn', label: '錢進帳', sub: '官網款項、LINE Pay、現金存銀行', sec: 'money' },
@@ -429,10 +429,13 @@ const FORMS = {
   },
   gift(){
     const f = S.F.gift;
-    return `<h3>公關出庫（不跟銷售一起的贈送）</h3>
-      ${field('gift.party', '送給誰', inp('gift.party', 'text', f.party, '', '例：合作品牌、媒體'))}
+    const kinds = ['官網訂單備註贈品', '店內加送', '公關品', '合作品牌', '媒體'];
+    return `<h3>贈品・公關品出庫</h3>
+      <p class="lab" style="margin:0">免費送出去的東西都記這裡：官網訂單備註寫的贈品、店內額外加送、送合作品牌或媒體的公關品。庫存照扣，不算收入。</p>
+      <div><p class="lab">這次是送什麼（點一下帶入，也可以自己改）</p><div class="chips">${kinds.map((k) => chip(f.party.indexOf(k) === 0, 'set', 'gift.party|' + k + (k === '官網訂單備註贈品' ? ' ' + Number(f.date.slice(5, 7)) + '/' + Number(f.date.slice(8, 10)) + ' 包貨' : '：'), k, 'sq')).join('')}</div></div>
+      ${field('gift.party', '說明（送給誰、哪一批）', inp('gift.party', 'text', f.party, '', '例：官網訂單備註贈品 11/4 包貨、公關品：某某品牌'))}
       <div>${itemRows('giftQ', f.q, ALLCATS, '店內')}</div>
-      <div class="sum"><span class="lab" style="margin:0">庫存照扣，不算收入。跟著銷售送的贈品，請在「商品銷售」裡選，不要在這裡記。</span></div>
+      <div class="sum"><span class="lab" style="margin:0">不用在這裡記的：店內「商品銷售」時已經選的活動贈品，以及官網匯入時 0 元的贈品，這兩種系統已經扣過了。</span></div>
       ${dateNote(f, 'gift')}`;
   },
   monthly(){ return moneyForm('monthly', '月初撥存（依優先順序）', '每月 1–5 號做一次。由上往下撥，錢不夠時越下面越晚撥。金額是預設值，可改成這個月的實際金額。', true); },
@@ -580,7 +583,7 @@ function entryText(t){
     case '寄售對帳': return { title: t.party + ' 對帳（' + t.rec + '）', sub: d.group ? (d.lines || []).map((l) => l.store.replace(d.group, '').trim() + '・' + l.name + '×' + l.qty).join('、') : lines(d.lines), amt: money(t.amount), c: '' };
     case '寄售收款': return { title: t.party + ' 收款', sub: t.rec + ' 的款項・' + t.to, amt: '+' + money(t.amount), c: 'in-c' };
     case '分裝': return { title: t.party + ' 分裝', sub: '拆 ' + (d.opens || []).reduce((a, o) => a + o.bad + o.good, 0) + ' 瓶・做出 ' + lines(d.made), amt: '庫存', c: '' };
-    case '公關出庫': return { title: '公關出庫・' + t.party, sub: lines(d.lines), amt: '庫存', c: '' };
+    case '公關出庫': return { title: '贈品・公關品：' + t.party, sub: lines(d.lines), amt: '庫存', c: '' };
     case '庫存調整': return { title: '庫存調整・' + t.party, sub: (d.lines || []).map((l) => l.name + (l.qty > 0 ? '+' : '') + l.qty).join('、'), amt: '庫存', c: '' };
     default: return { title: t.party || t.category, sub: t.flow === '轉帳' ? t.from + ' → ' + t.to : (t.from || t.to), amt: (t.flow === '支出' || t.flow === '付款' ? '−' : t.flow === '收入' ? '+' : '') + money(t.amount), c: t.flow === '支出' || t.flow === '付款' ? 'out-c' : t.flow === '收入' ? 'in-c' : '' };
   }
