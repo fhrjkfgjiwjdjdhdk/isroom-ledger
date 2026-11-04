@@ -253,8 +253,8 @@ const ACTIONS = [
   { id: 'course', label: '課程收款', sub: '先收全額', quick: true },
   { id: 'expense', label: '支出', sub: '運費・樣品・個人', quick: true },
   { id: 'consign', label: '代售', sub: '寄賣品牌賣出', quick: true },
-  { id: 'send', label: '寄售送貨', sec: 'goods' }, { id: 'recon', label: '寄售對帳', sec: 'goods' }, { id: 'split', label: '分裝', sec: 'goods' },
-  { id: 'gift', label: '贈品・公關品', sec: 'goods' }, { id: 'adjust', label: '庫存調整', sec: 'goods' },
+  { id: 'gift', label: '贈品・公關品', sec: 'goods' }, { id: 'send', label: '寄售送貨', sec: 'goods' }, { id: 'split', label: '分裝', sec: 'goods' },
+  { id: 'adjust', label: '庫存調整', sec: 'goods' }, { id: 'recon', label: '寄售對帳', sec: 'goods' },
   { id: 'monthly', label: '月初撥存', sub: '每月 1–5 號，依序把錢分好', sec: 'money' },
   { id: 'bills', label: '繳費', sub: '帳單付出去時，從固定支出預留付', sec: 'money' },
   { id: 'settleIn', label: '錢進帳', sub: '官網款項、LINE Pay、現金存銀行', sec: 'money' },
@@ -274,7 +274,11 @@ function renderAdd(){
   let form = '';
   if (!S.action) form = `<div class="card" style="text-align:center;color:var(--sub)">選一個情況開始記帳<br>錢或貨經過你的手，當下就記一筆</div>`;
   else form = `<div class="card">${S.editing ? `<div class="hint" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>正在修改：${esc(S.editing.title)}（${esc(S.editing.date)}）<br>儲存後會取代原紀錄</span><button type="button" class="ghost" style="min-height:36px;padding:0 10px;flex:none" data-a="cancelEdit">取消修改</button></div>` : ''}${FORMS[S.action]()}<button type="button" class="save" data-a="save" ${S.busy ? 'disabled' : ''}>${saveLabel()}</button></div>`;
-  return `<div class="sec"><div><p class="lab">常用</p><div class="grid g2">${q}</div></div><div><p class="lab">貨品</p><div class="grid g3">${goods}</div></div><div><p class="lab">店內資金</p><div class="grid g2">${money_}</div></div>${form}</div>`;
+  // 表單直接展開在被點的那一區下面，其他區塊往下移
+  const cur = (ACTIONS.find((a) => a.id === S.action) || {});
+  const at = cur.quick ? 'quick' : cur.sec || '';
+  const blk = (k, html) => html + (at === k ? form : '');
+  return `<div class="sec">${blk('quick', `<div><p class="lab">常用</p><div class="grid g2">${q}</div></div>`)}${blk('goods', `<div><p class="lab">貨品</p><div class="grid g3">${goods}</div></div>`)}${blk('money', `<div><p class="lab">店內資金</p><div class="grid g2">${money_}</div></div>`)}${at ? '' : form}</div>`;
 }
 function saveLabel(){
   if (S.busy) return '記錄中…';
