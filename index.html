@@ -433,7 +433,7 @@ const FORMS = {
   },
   monthly(){ return moneyForm('月初', '月初撥存（依優先順序）', '每月 1–5 號做一次。由上往下撥，錢不夠時越下面越晚撥。金額是預設值，可改成這個月的實際金額。', true); },
   bills(){ return moneyForm('繳費', '繳費：從固定支出預留付出', '帳單真的付出去時才記。每月的帳單、以及這個月要繳的勞健保或發票機會預先勾選；還沒付的先取消勾選，付款那天再回來記。', false); },
-  settle(){ return moneyForm('結清', '入帳與結清', '帳戶每進一筆官網的錢，就勾對應的一項，金額改成實際入帳的數字。其他項目需要時再勾。預設金額是目前還沒進帳或還沒結清的金額。', false); },
+  settle(){ return moneyForm('結清', '入帳與結清', '帳戶每進一筆官網的錢，就勾對應的一項，金額改成實際入帳的數字。其他項目需要時再勾。預設金額是目前還沒進帳或還沒結清的金額。<br>待入帳的預設金額：正數：平台還欠你的錢。負數：錢已經收了，但還有貨沒出。', false); },
   adjust(){
     const f = S.F.adjust;
     const locs = ['店內', '店內展示'].concat(S.B.stores.map((s) => s.name));
@@ -660,7 +660,7 @@ function renderReport(){
     ${vatCard(s)}
     <div class="card" style="gap:6px"><p class="lab" style="margin:0">帳戶裡，但不能動的錢</p>${kv('預收課程款（還沒上課）', s.held.prepaid)}${kv('代售應付（品牌的錢）', s.held.payable)}${kv('稅金預留', s.held.taxReserve)}</div>
     ${pend.length ? `<div class="card" style="gap:6px;background:var(--warnbg);border-color:#EAD9B5"><p class="lab" style="margin:0;color:var(--warn)">待處理</p>${pend.join('')}</div>` : ''}
-    <div class="card" style="gap:4px"><p class="lab" style="margin:0">月底帳戶餘額（和銀行、LINE Pay 對一次）</p>${s.balances.map((b) => `<div class="kv"><span>${esc(b.name)}${b.scope === '個人' ? '<span class="tag">個人</span>' : ''}</span><span class="${b.balance < 0 ? 'out-c' : ''}">${money(b.balance)}</span></div>`).join('')}</div>
+    <div class="card" style="gap:4px"><p class="lab" style="margin:0">月底帳戶餘額（和銀行、LINE Pay 對一次）</p>${s.balances.map((b) => `<div class="kv"><span>${esc(b.name)}${b.scope === '個人' ? '<span class="tag">個人</span>' : ''}</span><span class="${b.balance < 0 ? 'out-c' : ''}">${money(b.balance)}</span></div>${/待入帳$/.test(b.name) ? `<small class="lab" style="margin:-2px 0 4px">${b.balance > 0 ? '平台還欠你的錢' : b.balance < 0 ? '錢已經收了，但還有貨沒出' : '錢和貨都對上了'}</small>` : ''}`).join('')}<p class="lab" style="margin:4px 0 0">兩個「待入帳」帳戶：正數：平台還欠你的錢。負數：錢已經收了，但還有貨沒出。</p></div>
     ${itemCard(s)}
     ${s.personal ? `<div class="card" style="gap:4px"><p class="lab" style="margin:0">主理人個人支出</p>${kv('合計', s.personal, 'b')}${sub(s.personalBy)}</div>` : ''}
   </div>`;
