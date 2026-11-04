@@ -358,7 +358,7 @@ const FORMS = {
     return `<h3>代售：店內寄賣品牌賣出</h3>
       <div class="chips">${S.B.brands.map((x, i) => chip(f.brand === x.name, 'pickIdx', 'consign.brand|brands|' + i, esc(x.name))).join('')}</div>
       ${field('consign.price', '售價', inp('consign.price', 'number', f.price, 'big', '0'))}
-      <div><p class="lab">收進哪個帳戶</p><div class="chips">${accounts().filter((a) => ['收款','營運'].indexOf(a.kind) > -1).map((a) => chip(f.account === a.name, 'set', 'consign.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>
+      <div><p class="lab">收進哪個帳戶</p><div class="chips">${accounts().filter((a) => ['收款','營運','個人'].indexOf(a.kind) > -1 && !/待入帳$/.test(a.name)).map((a) => chip(f.account === a.name, 'set', 'consign.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>
       <div class="sum"><span class="lab" style="margin:0">先扣 5% 稅，再依 店 ${Math.round(b.rate * 10)}：品牌 ${Math.round((1 - b.rate) * 10)} 拆帳</span>
         <div class="kv"><span>稅金</span><span>${money(tax)}</span></div><div class="kv b in-c"><span>店的收入</span><span>${money(shop)}</span></div><div class="kv" style="color:var(--warn)"><span>應付品牌（不是店的錢）</span><span>${money(brand)}</span></div></div>
       ${dateNote(f, 'consign')}`;
