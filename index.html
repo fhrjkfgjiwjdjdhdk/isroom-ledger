@@ -257,7 +257,7 @@ const ACTIONS = [
   { id: 'gift', label: '公關出庫', sec: 'goods' }, { id: 'adjust', label: '庫存調整', sec: 'goods' },
   { id: 'monthly', label: '月初撥存', sub: '每月 1–5 號，依序把錢分好', sec: 'money' },
   { id: 'bills', label: '繳費', sub: '帳單付出去時，從固定支出預留付', sec: 'money' },
-  { id: 'settle', label: '入帳與結清', sub: '便利配匯款、現金存銀行、轉回店裡、繳稅', sec: 'money' },
+  { id: 'settle', label: '入帳與結清', sub: '官網款項入帳、現金存銀行、轉回店裡、繳稅', sec: 'money' },
   { id: 'transfer', label: '其他轉帳', sub: '期初資金、業主投入等', sec: 'money' }
 ];
 // 月初分錢拆成三張卡片：每張只處理自己那一組
@@ -298,7 +298,10 @@ const FORMS = {
       promo = `<div class="promo"><div><div class="t">進行中的活動</div><b>${esc(pr.name)}</b><div class="lab" style="margin:0">${esc(pr.start)} – ${esc(pr.end)}・${esc(pr.mode)}</div></div>${body}</div>`;
     }
     const total = f.cart.reduce((t, l) => t + (prod(l.id).price || 0) * l.qty, 0);
-    const payAccs = `<div><p class="lab">${f.channel === '官網' ? '付款方式（刷卡、LINE Pay 選錢進去的帳戶；超商貨到付款選「超商代收待入帳」）' : '收款方式'}</p><div class="chips">${accounts().filter((a) => ['收款','營運','個人'].indexOf(a.kind) > -1 && (f.channel === '官網' || a.name !== '超商代收待入帳')).map((a) => chip(f.account === a.name, 'set', 'sale.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>`;
+    const HOLD = ['線上付款待入帳', '超商代收待入帳'];
+    const payAccs = f.channel === '官網'
+      ? `<div><p class="lab">付款方式（錢還沒進帳，先記在這裡）</p><div class="chips">${HOLD.filter((n) => accounts().some((a) => a.name === n)).map((n) => chip(f.account === n, 'set', 'sale.account|' + n, n === '線上付款待入帳' ? '刷卡、LINE Pay、轉帳' : '超商貨到付款', 'sq')).join('')}</div></div>`
+      : `<div><p class="lab">收款方式</p><div class="chips">${accounts().filter((a) => ['收款','營運','個人'].indexOf(a.kind) > -1 && HOLD.indexOf(a.name) < 0).map((a) => chip(f.account === a.name, 'set', 'sale.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>`;
     const warn = f.channel === '店內' && accScope(f.account) === '個人' ? `<div class="hint">店的收入進了個人帳戶，會記成「代收」。之後轉回公司戶時，用「其他轉帳 › 代收款轉回」。</div>` : '';
     return `<h3>商品銷售</h3>
       <div class="grid g2">${chip(f.channel === '店內', 'set', 'sale.channel|店內', '店內', 'sq')}${chip(f.channel === '官網', 'set', 'sale.channel|官網', '官網訂單', 'sq')}</div>
@@ -319,7 +322,7 @@ const FORMS = {
       <div><p class="lab">人數</p><div class="grid g4">${[1,2,3,4].map((n) => chip(f.people === n, 'set', 'course.people|' + n, n + ' 人', 'sq')).join('')}</div></div>
       <div class="grid">${field('course.classDate', '上課日期', inp('course.classDate', 'date', f.classDate))}${field('course.amount', auto === null ? '金額（課程未設定價，請手填）' : '金額（預設 ' + money(auto) + '，可改）', inp('course.amount', 'number', f.amount === '' && auto !== null ? auto : f.amount, '', '0'))}</div>
       ${field('course.party', '學員（選填）', inp('course.party', 'text', f.party))}
-      <div><p class="lab">收進哪個帳戶</p><div class="chips">${accounts().filter((a) => (['收款','營運'].indexOf(a.kind) > -1 && a.name !== '超商代收待入帳') || a.name === '個人帳戶').map((a) => chip(f.account === a.name, 'set', 'course.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>
+      <div><p class="lab">收進哪個帳戶</p><div class="chips">${accounts().filter((a) => (['收款','營運'].indexOf(a.kind) > -1 && ['超商代收待入帳','線上付款待入帳'].indexOf(a.name) < 0) || a.name === '個人帳戶').map((a) => chip(f.account === a.name, 'set', 'course.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>
       ${accScope(f.account) === '個人' ? `<div class="hint">課程費匯進個人帳戶，會記成「代收」。之後轉回公司戶時，用「其他轉帳 › 代收款轉回」。</div>` : ''}
       <div class="sum"><span class="lab" style="margin:0" id="course-note">${esc(note)}</span></div>
       ${dateNote(f, 'course')}`;
@@ -430,7 +433,7 @@ const FORMS = {
   },
   monthly(){ return moneyForm('月初', '月初撥存（依優先順序）', '每月 1–5 號做一次。由上往下撥，錢不夠時越下面越晚撥。金額是預設值，可改成這個月的實際金額。', true); },
   bills(){ return moneyForm('繳費', '繳費：從固定支出預留付出', '帳單真的付出去時才記。每月的帳單、以及這個月要繳的勞健保或發票機會預先勾選；還沒付的先取消勾選，付款那天再回來記。', false); },
-  settle(){ return moneyForm('結清', '入帳與結清', '需要時再勾選。預設金額是目前帳上的餘額或未結清金額；單月份會標出要繳的營業稅。', false); },
+  settle(){ return moneyForm('結清', '入帳與結清', '帳戶每進一筆官網的錢，就勾對應的一項，金額改成實際入帳的數字。其他項目需要時再勾。預設金額是目前還沒進帳或還沒結清的金額。', false); },
   adjust(){
     const f = S.F.adjust;
     const locs = ['店內', '店內展示'].concat(S.B.stores.map((s) => s.name));
@@ -739,7 +742,7 @@ function setPath(path, val){
   const f = S.F[form]; if (!f) return;
   if (['people'].indexOf(key) > -1) val = Number(val);
   if (form === 'sale' && key === 'cat') { f.cat = val; return; }
-  if (form === 'sale' && key === 'channel') { f.channel = val; f.account = val === '官網' ? '超商代收待入帳' : '店內現金'; return; }
+  if (form === 'sale' && key === 'channel') { f.channel = val; f.account = val === '官網' ? '線上付款待入帳' : '店內現金'; return; }
   if (form === 'expense' && key === 'scope') { f.scope = val; f.category = val === '店務' ? '運費' : '餐飲'; f.account = val === '店務' ? '公司營運戶' : '個人帳戶'; return; }
   if (form === 'course' && (key === 'course' || key === 'people')) f.amount = '';
   if (form === 'split' && key === 'series') { f.open = {}; f.made = {}; f.show = {}; }
