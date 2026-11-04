@@ -478,8 +478,14 @@ function moneyForm(group, title, desc, numbered){
       <span class="nm"><b>${esc(x.label)}${due}</b><small>${esc(route)}${changed}</small></span>
       <label><span class="sr">${esc(x.label)} 金額</span><input class="amt" id="m.${x.key}" data-in="m.${x.key}" type="number" inputmode="numeric" value="${esc(f.amounts[x.key])}"></label>${x.note && group !== '繳費' ? `<small class="mnote">${esc(x.note)}</small>` : ''}</div>`; };
   const total = items.filter((x) => f.ticks[x.key]).reduce((t, x) => t + num(f.amounts[x.key]), 0);
+  let list = items.map(row).join('');
+  if (group === '結清') {
+    const sec = (x) => /待入帳$/.test(x.from) || ['店內現金', 'LINE Pay'].indexOf(x.from) > -1 ? 0 : ['代收款轉回', '代墊歸還'].indexOf(x.category) > -1 ? 1 : x.kind === '付款' ? 2 : 3;
+    const names = ['錢進帳（帳戶每進一筆就記）', '個人帳戶和店的往來', '付款與繳稅', '其他'];
+    list = names.map((n, k) => { const xs = items.filter((x) => sec(x) === k); return xs.length ? `<p class="lab" style="margin:10px 0 0;font-weight:700;color:var(--deep)">${n}</p>` + xs.map(row).join('') : ''; }).join('');
+  }
   return `<h3>${title}</h3><p class="lab" style="margin:0">${desc}</p>
-    ${items.map(row).join('')}
+    ${list}
     <div class="kv b" style="border-top:1px solid var(--line);padding-top:8px"><span>勾選合計</span><span>${money(total)}</span></div>
     ${field('monthly.date', '日期', inp('monthly.date', 'date', f.date))}`;
 }
