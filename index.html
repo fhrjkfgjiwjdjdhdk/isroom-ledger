@@ -55,6 +55,7 @@ input.amt{width:104px;text-align:right;font-variant-numeric:tabular-nums}
 .sum{background:var(--paper);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;font-variant-numeric:tabular-nums}
 .kv{display:flex;justify-content:space-between;gap:12px;font-size:14px}
 .kv.b{font-weight:700;font-size:15px}.kv.s{font-size:12px;color:var(--sub)}.kv.ind{padding-left:12px;font-size:13px;color:var(--sub)}
+.kv.minus{font-size:14px}.kv.det{padding-left:26px;font-size:12px;color:var(--sub)}.kv.det span:first-child::before{content:'其中 '}
 .kv.tot{border-top:1px solid var(--line);padding-top:6px;margin-top:2px;font-weight:700;font-size:15px}
 .in-c{color:var(--in)}.out-c{color:var(--out)}
 .hint{background:var(--warnbg);color:var(--warn);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.6}
@@ -249,7 +250,7 @@ const ACTIONS = [
   { id: 'gift', label: '公關出庫', sec: 'goods' }, { id: 'adjust', label: '庫存調整', sec: 'goods' },
   { id: 'monthly', label: '月初撥存', sub: '每月 1–5 號，依序把錢分好', sec: 'money' },
   { id: 'bills', label: '繳費', sub: '帳單付出去時，從固定支出預留付', sec: 'money' },
-  { id: 'settle', label: '月底結清', sub: '現金存銀行、撥款、代墊、繳稅', sec: 'money' },
+  { id: 'settle', label: '入帳與結清', sub: '便利配匯款、現金存銀行、轉回店裡、繳稅', sec: 'money' },
   { id: 'transfer', label: '其他轉帳', sub: '期初資金、業主投入等', sec: 'money' }
 ];
 // 月初分錢拆成三張卡片：每張只處理自己那一組
@@ -290,8 +291,7 @@ const FORMS = {
       promo = `<div class="promo"><div><div class="t">進行中的活動</div><b>${esc(pr.name)}</b><div class="lab" style="margin:0">${esc(pr.start)} – ${esc(pr.end)}・${esc(pr.mode)}</div></div>${body}</div>`;
     }
     const total = f.cart.reduce((t, l) => t + (prod(l.id).price || 0) * l.qty, 0);
-    const payAccs = f.channel === '官網' ? `<p class="lab">官網訂單的錢先記在「官網平台待撥款」，撥款進銀行時用「月底結清 › 官網平台撥款」記。</p>` :
-      `<div><p class="lab">收款方式</p><div class="chips">${accounts().filter((a) => ['收款','營運','個人'].indexOf(a.kind) > -1 && a.name !== '官網平台待撥款').map((a) => chip(f.account === a.name, 'set', 'sale.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>`;
+    const payAccs = `<div><p class="lab">${f.channel === '官網' ? '付款方式（刷卡、LINE Pay 選錢進去的帳戶；超商貨到付款選「超商代收待入帳」）' : '收款方式'}</p><div class="chips">${accounts().filter((a) => ['收款','營運','個人'].indexOf(a.kind) > -1 && (f.channel === '官網' || a.name !== '超商代收待入帳')).map((a) => chip(f.account === a.name, 'set', 'sale.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>`;
     const warn = f.channel === '店內' && accScope(f.account) === '個人' ? `<div class="hint">店的收入進了個人帳戶，會記成「代收」。之後轉回公司戶時，用「其他轉帳 › 代收款轉回」。</div>` : '';
     return `<h3>商品銷售</h3>
       <div class="grid g2">${chip(f.channel === '店內', 'set', 'sale.channel|店內', '店內', 'sq')}${chip(f.channel === '官網', 'set', 'sale.channel|官網', '官網訂單', 'sq')}</div>
@@ -312,7 +312,7 @@ const FORMS = {
       <div><p class="lab">人數</p><div class="grid g4">${[1,2,3,4].map((n) => chip(f.people === n, 'set', 'course.people|' + n, n + ' 人', 'sq')).join('')}</div></div>
       <div class="grid">${field('course.classDate', '上課日期', inp('course.classDate', 'date', f.classDate))}${field('course.amount', auto === null ? '金額（課程未設定價，請手填）' : '金額（預設 ' + money(auto) + '，可改）', inp('course.amount', 'number', f.amount === '' && auto !== null ? auto : f.amount, '', '0'))}</div>
       ${field('course.party', '學員（選填）', inp('course.party', 'text', f.party))}
-      <div><p class="lab">收進哪個帳戶</p><div class="chips">${accounts().filter((a) => (['收款','營運'].indexOf(a.kind) > -1 && a.name !== '官網平台待撥款') || a.name === '個人帳戶').map((a) => chip(f.account === a.name, 'set', 'course.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>
+      <div><p class="lab">收進哪個帳戶</p><div class="chips">${accounts().filter((a) => (['收款','營運'].indexOf(a.kind) > -1 && a.name !== '超商代收待入帳') || a.name === '個人帳戶').map((a) => chip(f.account === a.name, 'set', 'course.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>
       ${accScope(f.account) === '個人' ? `<div class="hint">課程費匯進個人帳戶，會記成「代收」。之後轉回公司戶時，用「其他轉帳 › 代收款轉回」。</div>` : ''}
       <div class="sum"><span class="lab" style="margin:0" id="course-note">${esc(note)}</span></div>
       ${dateNote(f, 'course')}`;
@@ -423,7 +423,7 @@ const FORMS = {
   },
   monthly(){ return moneyForm('月初', '月初撥存（依優先順序）', '每月 1–5 號做一次。由上往下撥，錢不夠時越下面越晚撥。金額是預設值，可改成這個月的實際金額。', true); },
   bills(){ return moneyForm('繳費', '繳費：從固定支出預留付出', '帳單真的付出去時才記。每月的帳單、以及這個月要繳的勞健保或發票機會預先勾選；還沒付的先取消勾選，付款那天再回來記。', false); },
-  settle(){ return moneyForm('結清', '月底結清', '需要時再勾選。預設金額是目前帳上的餘額或未結清金額；單月份會標出要繳的營業稅。', false); },
+  settle(){ return moneyForm('結清', '入帳與結清', '需要時再勾選。預設金額是目前帳上的餘額或未結清金額；單月份會標出要繳的營業稅。', false); },
   adjust(){
     const f = S.F.adjust;
     const locs = ['店內', '店內展示'].concat(S.B.stores.map((s) => s.name));
@@ -444,7 +444,7 @@ const FORMS = {
     const f = S.F.transfer;
     const cats = ['帳戶間轉帳', '期初資金', '業主投入資金', '代收款轉回', '代墊歸還', '業主薪資提取', '撥存', '代售貨款支付', '營業稅繳納'];
     const accs = accounts();
-    const hint = { '期初資金': '新帳戶開好、把現有的錢存進去時用。只填「轉入帳戶」。', '業主投入資金': '從個人存款補錢進店裡。', '代收款轉回': '店的收入之前進了個人帳戶，現在轉回店的帳戶。', '代墊歸還': '店還你之前代墊的錢。', '帳戶間轉帳': '例如現金存銀行、LINE Pay 撥款。', '業主薪資提取': '店發薪水給主理人。', '撥存': '存進稅金、固定支出、原料或耗材預留帳戶。', '代售貨款支付': '付給代售品牌的貨款，只選「轉出帳戶」。', '營業稅繳納': '申報營業稅時繳的錢，通常從「稅金預留」付出，只選「轉出帳戶」。' }[f.category];
+    const hint = { '期初資金': '新帳戶開好、把現有的錢存進去時用。只填「轉入帳戶」。', '業主投入資金': '從個人存款補錢進店裡。', '代收款轉回': '店的收入之前進了個人帳戶，現在轉回店的帳戶。', '代墊歸還': '店還你之前代墊的錢。', '帳戶間轉帳': '例如現金存銀行、店內 LINE Pay 入帳。', '業主薪資提取': '店發薪水給主理人。', '撥存': '存進稅金、固定支出、原料或耗材預留帳戶。', '代售貨款支付': '付給代售品牌的貨款，只選「轉出帳戶」。', '營業稅繳納': '申報營業稅時繳的錢，通常從「稅金預留」付出，只選「轉出帳戶」。' }[f.category];
     return `<h3>其他轉帳</h3>
       <div class="chips">${cats.map((c) => chip(f.category === c, 'set', 'transfer.category|' + c, c)).join('')}</div>
       <p class="lab" style="margin:0">${esc(hint)}</p>
@@ -618,6 +618,8 @@ function renderReport(){
   if (s.error) return nav + '<div class="empty">讀取失敗，請按上下月份重試</div>';
   const kv = (k, v, cls) => `<div class="kv ${cls || ''}"><span>${k}</span><span>${money(v)}</span></div>`;
   const sub = (o) => Object.keys(o).map((k) => kv(esc(k), o[k], 'ind')).join('');
+  const det = (o) => Object.keys(o).filter((k) => Math.round(o[k])).map((k) => kv(esc(k), o[k], 'det')).join('');
+  const minus = (k, v) => Math.round(v) ? kv('－ ' + k, -v, 'minus') : '';
   const sign = (v) => v >= 0 ? 'in-c' : 'out-c';
   const pct = Math.max(0, Math.min(100, s.breakevenTarget ? s.breakevenActual / s.breakevenTarget * 100 : 0));
   const bp = Math.max(0, Math.min(100, s.batch.saved / s.batch.target * 100));
@@ -627,15 +629,18 @@ function renderReport(){
   if (s.pending.personalFromShop > 0) pend.push(kv('本月用店帳戶付的個人開銷', s.pending.personalFromShop));
   if (s.pending.missingRecon.length) pend.push(`<div class="kv"><span>本月還沒對帳</span><span>${esc(s.pending.missingRecon.join('、'))}</span></div>`);
   return `<div class="sec">${nav}
-    <div class="card" style="gap:6px;font-variant-numeric:tabular-nums"><p class="lab" style="margin:0">店的獲利，一層一層往下扣</p>
-      ${kv('營業收入（含稅）', s.revenue, 'b')}${sub(s.revenueBy)}${kv('營業稅', -s.tax, 'ind')}
-      ${kv('寄售抽成', -s.commission, 'ind')}${kv('營業成本', -s.cogs, 'ind')}${sub(s.cogsBy)}
-      ${kv('毛利', s.gross, 'tot')}
-      ${kv('營業費用', -s.opex, 'ind')}${sub(s.opexBy)}
-      ${kv('營業淨利', s.operating, 'tot')}
-      ${kv('主理人薪水', -s.salary, 'ind')}${kv('店真正留下的', s.afterSalary, 'tot ' + sign(s.afterSalary))}
-      ${kv('撥存（原料＋耗材）', -s.reserves, 'ind')}${kv('可自由運用', s.free, 'tot ' + sign(s.free))}
-      <p class="lab" style="margin:4px 0 0">勞健保、發票機用「換算每月」攤平，不會在繳費月突然變大。商品成本只算這個月買的原料耗材，第一批貨的成本追不到，所以毛利會偏高，看「可自由運用」最接近真實。</p></div>
+    <div class="card" style="gap:6px;font-variant-numeric:tabular-nums"><p class="lab" style="margin:0">收入先寫，下面每一行「－」都是要扣掉的錢，「＝」是扣完剩下的。灰色小字是上一行的明細。</p>
+      ${kv('收入（含稅）', s.revenue, 'b')}${det(s.revenueBy)}
+      ${minus('營業稅（收入裡要繳給國稅局的 5%）', s.tax)}${minus('寄售點抽成', s.commission)}
+      ${minus('商品成本（原料、瓶器、耗材）', s.cogs)}${det(s.cogsBy)}
+      ${kv('＝ 毛利', s.gross, 'tot')}
+      ${minus('營業費用（房租、水電、勞健保…）', s.opex)}${det(s.opexBy)}
+      ${kv('＝ 營業淨利', s.operating, 'tot ' + sign(s.operating))}
+      ${minus('主理人薪水', s.salary)}
+      ${kv('＝ 店真正留下的', s.afterSalary, 'tot ' + sign(s.afterSalary))}
+      ${minus('撥存（第二批原料＋耗材）', s.reserves)}
+      ${kv('＝ 可自由運用', s.free, 'tot ' + sign(s.free))}
+      <p class="lab" style="margin:4px 0 0">・房租、網路、電費在「繳費」記了才會出現；勞健保、發票機不是每月繳，先每月攤一份，所以月初就會看到。<br>・月中看這張會偏負，因為費用先算、收入還沒進來，看月底的數字才準。<br>・第一批貨的成本沒有記，所以商品成本偏低、毛利偏高，最接近真實的是「可自由運用」。</p></div>
     <div class="card" style="gap:8px"><p class="lab" style="margin:0">打平線：固定支出＋薪水＋撥存 ${money(s.breakevenTarget)}</p><div class="bar"><i style="width:${pct}%"></i></div><div class="kv"><span>扣掉抽成、成本、零碎費用後 ${money(s.breakevenActual)}</span><span class="${s.breakevenActual >= s.breakevenTarget ? 'in-c' : 'out-c'}">${s.breakevenActual >= s.breakevenTarget ? '已達成' : '還差 ' + money(s.breakevenTarget - s.breakevenActual)}</span></div></div>
     <div class="card" style="gap:8px"><p class="lab" style="margin:0">第二批原料預留：目標 ${money(s.batch.target)}</p><div class="bar"><i style="width:${bp}%;background:var(--blue)"></i></div><div class="kv"><span>已存 ${money(s.batch.saved)}</span><span>還差 ${money(Math.max(0, s.batch.target - s.batch.saved))}</span></div></div>
     ${promos}
@@ -658,7 +663,7 @@ function oweCard(s){
     <div class="kv ind"><span>個人幫店付的（代墊）</span><span>−${money(o.advanced)}</span></div>
     ${o.returned ? `<div class="kv ind"><span>已經轉回店裡</span><span>−${money(o.returned)}</span></div>` : ''}
     ${o.repaid ? `<div class="kv ind"><span>店已經還給個人</span><span>${money(o.repaid)}</span></div>` : ''}
-    <p class="lab" style="margin:2px 0 0">${o.net > 0 ? '公司戶開好後，用「月底結清 › 個人帳戶轉回店裡」記一筆，金額已自動帶好。' : o.net < 0 ? '用「月底結清 › 代墊歸還」記一筆，金額已自動帶好。' : '個人帳戶裡沒有店的錢，也沒有欠個人的錢。'}</p>
+    <p class="lab" style="margin:2px 0 0">${o.net > 0 ? '公司戶開好後，用「入帳與結清 › 個人帳戶轉回店裡」記一筆，金額已自動帶好。' : o.net < 0 ? '用「入帳與結清 › 代墊歸還」記一筆，金額已自動帶好。' : '個人帳戶裡沒有店的錢，也沒有欠個人的錢。'}</p>
   </div>`;
 }
 function vatCard(s){
@@ -675,7 +680,7 @@ function vatCard(s){
       <div class="kv s"><span>本月 15 日前申報${v.paidThisMonth ? '，已繳 ' + money(v.paidThisMonth) : '，尚未記繳納'}</span><span></span></div>` : ''}
     <div class="kv tot"><span>稅金預留目前</span><span>${money(v.reserve)}</span></div>
     <div class="kv b ${ok ? 'in-c' : 'out-c'}"><span>${ok ? '足夠，多出' : '還差'}</span><span>${money(Math.abs(v.gap))}</span></div>
-    <p class="lab" style="margin:2px 0 0">應提稅金＝收入裡含的 5% 營業稅，還沒扣掉進貨、房租等有統編發票的進項稅額，所以實際要繳的通常會少一些。繳稅時用「月底結清 › 繳營業稅」或「其他轉帳 › 營業稅繳納」記。</p>
+    <p class="lab" style="margin:2px 0 0">應提稅金＝收入裡含的 5% 營業稅，還沒扣掉進貨、房租等有統編發票的進項稅額，所以實際要繳的通常會少一些。繳稅時用「入帳與結清 › 繳營業稅」或「其他轉帳 › 營業稅繳納」記。</p>
   </div>`;
 }
 function itemCard(s){
@@ -725,7 +730,7 @@ function setPath(path, val){
   const f = S.F[form]; if (!f) return;
   if (['people'].indexOf(key) > -1) val = Number(val);
   if (form === 'sale' && key === 'cat') { f.cat = val; return; }
-  if (form === 'sale' && key === 'channel') { f.channel = val; f.account = val === '官網' ? '官網平台待撥款' : '店內現金'; return; }
+  if (form === 'sale' && key === 'channel') { f.channel = val; f.account = val === '官網' ? '超商代收待入帳' : '店內現金'; return; }
   if (form === 'expense' && key === 'scope') { f.scope = val; f.category = val === '店務' ? '運費' : '餐飲'; f.account = val === '店務' ? '公司營運戶' : '個人帳戶'; return; }
   if (form === 'course' && (key === 'course' || key === 'people')) f.amount = '';
   if (form === 'split' && key === 'series') { f.open = {}; f.made = {}; f.show = {}; }
