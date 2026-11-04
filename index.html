@@ -457,7 +457,8 @@ const FORMS = {
         return `<div class="row"><span class="nm"><span>${esc(p.name)}</span><small>目前 ${cur}${d ? ' → 調整後 ' + (cur + d) : ''}</small></span><div class="step"><button type="button" data-a="adjQ" data-v="${p.id}|-1" aria-label="減少">−</button><b>${d > 0 ? '+' + d : d}</b><button type="button" data-a="adjQ" data-v="${p.id}|1" aria-label="增加">+</button></div></div>`; }).join(''); }).join('');
     return `<h3>庫存調整</h3>
       <p class="lab" style="margin:0">用在寄售點回報期初數量、盤點對不上、破損報廢。填的是「增減幾件」，不是最後的數量。</p>
-      <div class="chips">${locs.map((l) => chip(f.loc === l, 'set', 'adjust.loc|' + l, esc(l), 'sq')).join('')}</div>
+      <div><p class="lab">店內</p><div class="chips">${locs.slice(0, 2).map((l) => chip(f.loc === l, 'set', 'adjust.loc|' + l, esc(l), 'sq')).join('')}</div></div>
+      <div><p class="lab">寄售點</p><div class="chips">${locs.slice(2).map((l) => chip(f.loc === l, 'set', 'adjust.loc|' + l, esc(l), 'sq')).join('')}</div></div>
       <div class="chips">${states.map((s) => chip(f.state === s, 'set', 'adjust.state|' + s, s, 'sq')).join('')}</div>
       <div>${rows}</div>
       ${field('adjust.note', '原因（必填，例：模範回報期初、破損 1 瓶）', inp('adjust.note', 'text', f.note))}
