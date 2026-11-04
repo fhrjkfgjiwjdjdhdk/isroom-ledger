@@ -257,11 +257,15 @@ const ACTIONS = [
   { id: 'gift', label: '公關出庫', sec: 'goods' }, { id: 'adjust', label: '庫存調整', sec: 'goods' },
   { id: 'monthly', label: '月初撥存', sub: '每月 1–5 號，依序把錢分好', sec: 'money' },
   { id: 'bills', label: '繳費', sub: '帳單付出去時，從固定支出預留付', sec: 'money' },
-  { id: 'settle', label: '入帳與結清', sub: '官網款項入帳、現金存銀行、轉回店裡、繳稅', sec: 'money' },
+  { id: 'settleIn', label: '錢進帳', sub: '官網款項、LINE Pay、現金存銀行', sec: 'money' },
+  { id: 'settleOwe', label: '個人帳戶和店的往來', sub: '轉回店裡、代墊歸還', sec: 'money' },
+  { id: 'settlePay', label: '付款與繳稅', sub: '代售品牌貨款、營業稅', sec: 'money' },
   { id: 'transfer', label: '其他轉帳', sub: '期初資金、業主投入等', sec: 'money' }
 ];
 // 月初分錢拆成三張卡片：每張只處理自己那一組
-const MGROUP = { monthly: '月初', bills: '繳費', settle: '結清' };
+const MGROUP = { monthly: '月初', bills: '繳費', settleIn: '結清', settleOwe: '結清', settlePay: '結清' };
+const settleSec = (x) => /待入帳$/.test(x.from) || ['店內現金', 'LINE Pay'].indexOf(x.from) > -1 ? 'settleIn' : ['代收款轉回', '代墊歸還'].indexOf(x.category) > -1 ? 'settleOwe' : 'settlePay';
+const itemsOf = (a) => S.B.monthItems.filter((x) => x.group === MGROUP[a] && (x.group !== '結清' || settleSec(x) === a));
 
 function renderAdd(){
   const q = ACTIONS.filter((a) => a.quick).map((a) => `<button type="button" class="tile ${S.action === a.id ? 'on' : ''}" data-a="act" data-v="${a.id}"><b>${a.label}</b><span>${a.sub}</span></button>`).join('');
@@ -275,7 +279,7 @@ function renderAdd(){
 function saveLabel(){
   if (S.busy) return '記錄中…';
   if (S.editing) return '儲存修改';
-  if (MGROUP[S.action]) { const f = S.F.monthly; const n = S.B.monthItems.filter((x) => x.group === MGROUP[S.action] && f.ticks[x.key] && num(f.amounts[x.key]) > 0).length; return n ? '記下勾選的 ' + n + ' 筆' : '請先勾選要記的項目'; }
+  if (MGROUP[S.action]) { const f = S.F.monthly; const n = itemsOf(S.action).filter((x) => f.ticks[x.key] && num(f.amounts[x.key]) > 0).length; return n ? '記下勾選的 ' + n + ' 筆' : '請先勾選要記的項目'; }
   if (S.action === 'send') { const n = Object.values(S.F.send.q).reduce((a, b) => a + b, 0); return '送出這批（' + n + ' 件）'; }
   return '記下這筆';
 }
@@ -431,9 +435,11 @@ const FORMS = {
       <div class="sum"><span class="lab" style="margin:0">庫存照扣，不算收入。跟著銷售送的贈品，請在「商品銷售」裡選，不要在這裡記。</span></div>
       ${dateNote(f, 'gift')}`;
   },
-  monthly(){ return moneyForm('月初', '月初撥存（依優先順序）', '每月 1–5 號做一次。由上往下撥，錢不夠時越下面越晚撥。金額是預設值，可改成這個月的實際金額。', true); },
-  bills(){ return moneyForm('繳費', '繳費：從固定支出預留付出', '帳單真的付出去時才記。每月的帳單、以及這個月要繳的勞健保或發票機會預先勾選；還沒付的先取消勾選，付款那天再回來記。', false); },
-  settle(){ return moneyForm('結清', '入帳與結清', '帳戶每進一筆官網的錢，就勾對應的一項，金額改成實際入帳的數字。其他項目需要時再勾。預設金額是目前還沒進帳或還沒結清的金額。<br>待入帳的預設金額：正數：平台還欠你的錢。負數：錢已經收了，但還有貨沒出。', false); },
+  monthly(){ return moneyForm('monthly', '月初撥存（依優先順序）', '每月 1–5 號做一次。由上往下撥，錢不夠時越下面越晚撥。金額是預設值，可改成這個月的實際金額。', true); },
+  bills(){ return moneyForm('bills', '繳費：從固定支出預留付出', '帳單真的付出去時才記。每月的帳單、以及這個月要繳的勞健保或發票機會預先勾選；還沒付的先取消勾選，付款那天再回來記。', false); },
+  settleIn(){ return moneyForm('settleIn', '錢進帳', '帳戶每進一筆錢，就勾對應的一項，金額改成實際入帳的數字。<br>待入帳的預設金額：正數：平台還欠你的錢。負數：錢已經收了，但還有貨沒出。', false); },
+  settleOwe(){ return moneyForm('settleOwe', '個人帳戶和店的往來', '月底或需要時記。預設金額是系統算出來的：個人帳戶裡屬於店的錢、或店欠個人的代墊。', false); },
+  settlePay(){ return moneyForm('settlePay', '付款與繳稅', '真的付出去時才記。單月份會標出要繳的營業稅。', false); },
   adjust(){
     const f = S.F.adjust;
     const locs = ['店內', '店內展示'].concat(S.B.stores.map((s) => s.name));
@@ -465,11 +471,12 @@ const FORMS = {
   }
 };
 
-function moneyForm(group, title, desc, numbered){
+function moneyForm(action, title, desc, numbered){
   if (!S.F.monthly) initMonthly();
   const f = S.F.monthly;
   const m = Number(f.date.slice(5, 7));
-  const items = S.B.monthItems.filter((x) => x.group === group);
+  const group = MGROUP[action];
+  const items = itemsOf(action);
   const row = (x, i) => { const on = !!f.ticks[x.key];
     const due = group === '月初' ? '' : !x.months.length ? (group === '繳費' ? '<span class="tag">每月</span>' : '') : x.months.indexOf(m) > -1 ? '<span class="tag w">本月要繳</span>' : `<span class="tag">${x.months.join('、')} 月繳</span>`;
     const route = x.kind === '轉帳' ? `${x.from} → ${x.to}` : `${x.from} 付出`;
@@ -478,12 +485,7 @@ function moneyForm(group, title, desc, numbered){
       <span class="nm"><b>${esc(x.label)}${due}</b><small>${esc(route)}${changed}</small></span>
       <label><span class="sr">${esc(x.label)} 金額</span><input class="amt" id="m.${x.key}" data-in="m.${x.key}" type="number" inputmode="numeric" value="${esc(f.amounts[x.key])}"></label>${x.note && group !== '繳費' ? `<small class="mnote">${esc(x.note)}</small>` : ''}</div>`; };
   const total = items.filter((x) => f.ticks[x.key]).reduce((t, x) => t + num(f.amounts[x.key]), 0);
-  let list = items.map(row).join('');
-  if (group === '結清') {
-    const sec = (x) => /待入帳$/.test(x.from) || ['店內現金', 'LINE Pay'].indexOf(x.from) > -1 ? 0 : ['代收款轉回', '代墊歸還'].indexOf(x.category) > -1 ? 1 : x.kind === '付款' ? 2 : 3;
-    const names = ['錢進帳（帳戶每進一筆就記）', '個人帳戶和店的往來', '付款與繳稅', '其他'];
-    list = names.map((n, k) => { const xs = items.filter((x) => sec(x) === k); return xs.length ? `<p class="lab" style="margin:10px 0 0;font-weight:700;color:var(--deep)">${n}</p>` + xs.map(row).join('') : ''; }).join('');
-  }
+  const list = items.map(row).join('');
   return `<h3>${title}</h3><p class="lab" style="margin:0">${desc}</p>
     ${list}
     <div class="kv b" style="border-top:1px solid var(--line);padding-top:8px"><span>勾選合計</span><span>${money(total)}</span></div>
@@ -503,7 +505,7 @@ function payload(){
       : { action: 'recon', date: f.date, note: f.note, store: f.store, salesMonth: f.salesMonth, lines: Object.keys(f.q).map((k) => { const [i, id] = k.split(':'); return { id, qty: f.q[k], store: (tg.members[+i] || {}).name }; }) }; }
   if (a === 'split') { const f = F.split; return { action: 'split', date: f.date, note: f.note, series: f.series, opens: Object.keys(f.open).map((id) => ({ id, bad: f.open[id].bad, good: f.open[id].good, show: f.show[id] || 0 })), made: Object.keys(f.made).map((id) => ({ id, qty: f.made[id] })) }; }
   if (a === 'gift') { const f = F.gift; return { action: 'gift', date: f.date, note: f.note, party: f.party, lines: Object.keys(f.q).map((id) => ({ id, qty: f.q[id] })) }; }
-  if (MGROUP[a]) { const f = F.monthly; return { action: 'transfers', date: f.date, items: S.B.monthItems.filter((x) => x.group === MGROUP[a] && f.ticks[x.key] && num(f.amounts[x.key]) > 0).map((x) => ({ key: x.key, amount: f.amounts[x.key] })) }; }
+  if (MGROUP[a]) { const f = F.monthly; return { action: 'transfers', date: f.date, items: itemsOf(a).filter((x) => f.ticks[x.key] && num(f.amounts[x.key]) > 0).map((x) => ({ key: x.key, amount: f.amounts[x.key] })) }; }
   if (a === 'adjust') { const f = F.adjust; return { action: 'adjust', date: f.date, note: f.note, loc: f.loc, state: f.state, lines: Object.keys(f.q).map((id) => ({ id, qty: f.q[id] })) }; }
   if (a === 'transfer') { const f = F.transfer; return { action: 'transfer', date: f.date, note: f.note, category: f.category, from: f.from, to: f.to, amount: f.amount }; }
 }
@@ -681,7 +683,7 @@ function oweCard(s){
     <div class="kv ind"><span>個人幫店付的（代墊）</span><span>−${money(o.advanced)}</span></div>
     ${o.returned ? `<div class="kv ind"><span>已經轉回店裡</span><span>−${money(o.returned)}</span></div>` : ''}
     ${o.repaid ? `<div class="kv ind"><span>店已經還給個人</span><span>${money(o.repaid)}</span></div>` : ''}
-    <p class="lab" style="margin:2px 0 0">${o.net > 0 ? '公司戶開好後，用「入帳與結清 › 個人帳戶轉回店裡」記一筆，金額已自動帶好。' : o.net < 0 ? '用「入帳與結清 › 代墊歸還」記一筆，金額已自動帶好。' : '個人帳戶裡沒有店的錢，也沒有欠個人的錢。'}</p>
+    <p class="lab" style="margin:2px 0 0">${o.net > 0 ? '公司戶開好後，用「個人帳戶和店的往來 › 個人帳戶轉回店裡」記一筆，金額已自動帶好。' : o.net < 0 ? '用「入帳與結清 › 代墊歸還」記一筆，金額已自動帶好。' : '個人帳戶裡沒有店的錢，也沒有欠個人的錢。'}</p>
   </div>`;
 }
 function vatCard(s){
