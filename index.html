@@ -55,7 +55,14 @@ input.amt{width:104px;text-align:right;font-variant-numeric:tabular-nums}
 .sum{background:var(--paper);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;font-variant-numeric:tabular-nums}
 .kv{display:flex;justify-content:space-between;gap:12px;font-size:14px}
 .kv.b{font-weight:700;font-size:15px}.kv.s{font-size:12px;color:var(--sub)}.kv.ind{padding-left:12px;font-size:13px;color:var(--sub)}
-.kv.minus{font-size:14px}.fx{font-size:12px;color:var(--sub);margin:-2px 0 4px;text-align:right;font-variant-numeric:tabular-nums}.kv.det{padding-left:26px;font-size:12px;color:var(--sub)}.kv.det span:first-child::before{content:'其中 '}
+.pl{display:flex;flex-direction:column;gap:8px;font-variant-numeric:tabular-nums}
+.pl .blk{display:flex;flex-direction:column;gap:3px}
+.pl .grp{background:var(--paper);border-radius:10px;padding:8px 12px;display:flex;flex-direction:column;gap:3px}
+.pl .grp .kv+.kv.minus{margin-top:6px}
+.pl .res{background:var(--pale);border-left:4px solid var(--deep);border-radius:6px;padding:8px 12px}
+.pl .res .kv{font-weight:700;font-size:16px}
+.pl .res.neg{background:var(--warnbg);border-left-color:var(--out)}
+.kv.minus{font-size:14px}.pl .kv span:last-child{white-space:nowrap}.fx{font-size:12px;color:var(--sub);margin-top:2px;text-align:right}.kv.det{padding-left:18px;font-size:12px;color:var(--sub)}.kv.det span:first-child::before{content:'其中 '}
 .kv.tot{border-top:1px solid var(--line);padding-top:6px;margin-top:2px;font-weight:700;font-size:15px}
 .in-c{color:var(--in)}.out-c{color:var(--out)}
 .hint{background:var(--warnbg);color:var(--warn);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.6}
@@ -620,7 +627,8 @@ function renderReport(){
   const sub = (o) => Object.keys(o).map((k) => kv(esc(k), o[k], 'ind')).join('');
   const det = (o) => Object.keys(o).filter((k) => Math.round(o[k])).map((k) => kv(esc(k), o[k], 'det')).join('');
   const n = (v) => Math.round(v).toLocaleString('en-US');
-  const tot = (k, v, fx) => kv(k, v, 'tot ' + (k.indexOf('毛利') > -1 ? '' : sign(v))) + `<div class="fx">${fx}</div>`;
+  const tot = (k, v, fx) => `<div class="res${v < 0 ? ' neg' : ''}">${kv(k, v, v < 0 ? 'out-c' : '')}<div class="fx">${fx}</div></div>`;
+  const grp = (h) => h ? `<div class="grp">${h}</div>` : '';
   const minus = (k, v) => Math.round(v) ? kv('－ ' + k, -v, 'minus') : '';
   const sign = (v) => v >= 0 ? 'in-c' : 'out-c';
   const pct = Math.max(0, Math.min(100, s.breakevenTarget ? s.breakevenActual / s.breakevenTarget * 100 : 0));
@@ -631,16 +639,15 @@ function renderReport(){
   if (s.pending.personalFromShop > 0) pend.push(kv('本月用店帳戶付的個人開銷', s.pending.personalFromShop));
   if (s.pending.missingRecon.length) pend.push(`<div class="kv"><span>本月還沒對帳</span><span>${esc(s.pending.missingRecon.join('、'))}</span></div>`);
   return `<div class="sec">${nav}
-    <div class="card" style="gap:6px;font-variant-numeric:tabular-nums"><p class="lab" style="margin:0">收入先寫，下面每一行「－」都是要扣掉的錢，「＝」是扣完剩下的。灰色小字是上一行的明細。</p>
-      ${kv('收入（含稅）', s.revenue, 'b')}${det(s.revenueBy)}
-      ${minus('營業稅（收入裡要繳給國稅局的 5%）', s.tax)}${minus('寄售點抽成', s.commission)}
-      ${minus('商品成本（原料、瓶器、耗材）', s.cogs)}${det(s.cogsBy)}
+    <div class="card pl"><p class="lab" style="margin:0">一層一層往下扣：灰框是要扣掉的錢，色條是扣完剩下的（負數會變橘色）。</p>
+      <div class="blk">${kv('收入（含稅）', s.revenue, 'b')}${det(s.revenueBy)}</div>
+      ${grp(minus('營業稅（5%）', s.tax) + minus('寄售點抽成', s.commission) + minus('商品成本', s.cogs) + det(s.cogsBy))}
       ${tot('＝ 毛利', s.gross, '收入 ' + n(s.revenue) + ' − 營業稅 ' + n(s.tax) + (s.commission ? ' − 抽成 ' + n(s.commission) : '') + ' − 商品成本 ' + n(s.cogs))}
-      ${minus('營業費用（房租、水電、勞健保…）', s.opex)}${det(s.opexBy)}
+      ${grp(minus('營業費用', s.opex) + det(s.opexBy))}
       ${tot('＝ 營業淨利', s.operating, '毛利 ' + n(s.gross) + ' − 營業費用 ' + n(s.opex))}
-      ${minus('主理人薪水', s.salary)}
+      ${grp(minus('主理人薪水', s.salary))}
       ${s.salary ? tot('＝ 店真正留下的', s.afterSalary, '營業淨利 ' + n(s.operating) + ' − 薪水 ' + n(s.salary)) : ''}
-      ${minus('撥存（第二批原料＋耗材）', s.reserves)}
+      ${grp(minus('撥存', s.reserves))}
       ${tot('＝ 可自由運用', s.free, s.salary || s.reserves ? (s.salary ? '店真正留下的 ' + n(s.afterSalary) : '營業淨利 ' + n(s.operating)) + (s.reserves ? ' − 撥存 ' + n(s.reserves) : '') : '本月還沒記薪水和撥存，所以跟營業淨利一樣')}
       <p class="lab" style="margin:4px 0 0">・房租、網路、電費在「繳費」記了才會出現；勞健保、發票機不是每月繳，先每月攤一份，所以月初就會看到。<br>・月中看這張會偏負，因為費用先算、收入還沒進來，看月底的數字才準。<br>・第一批貨的成本沒有記，所以商品成本偏低、毛利偏高，最接近真實的是「可自由運用」。</p></div>
     <div class="card" style="gap:8px"><p class="lab" style="margin:0">打平線：固定支出＋薪水＋撥存 ${money(s.breakevenTarget)}</p><div class="bar"><i style="width:${pct}%"></i></div><div class="kv"><span>扣掉抽成、成本、零碎費用後 ${money(s.breakevenActual)}</span><span class="${s.breakevenActual >= s.breakevenTarget ? 'in-c' : 'out-c'}">${s.breakevenActual >= s.breakevenTarget ? '已達成' : '還差 ' + money(s.breakevenTarget - s.breakevenActual)}</span></div></div>
