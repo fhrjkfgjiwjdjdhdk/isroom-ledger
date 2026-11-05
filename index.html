@@ -158,7 +158,7 @@ function initForms(){
     sale: { cat: '正裝', channel: '店內', account: '店內現金', cart: [], picks: [], date: t, note: '' },
     course: { course: (S.B.courses[0] || {}).name || '', people: 1, classDate: '', amount: '', account: '公司營運戶', party: '', date: t, note: '' },
     expense: { scope: '店務', category: '運費', amount: '', account: '公司營運戶', party: '', date: t, note: '' },
-    collab: { kind: '創業顧問', party: '', amount: '', account: '公司營運戶', date: t, note: '' },
+    collab: { kind: '創業顧問', eventDate: '', party: '', amount: '', account: '公司營運戶', date: t, note: '' },
     consign: { brand: (S.B.brands[0] || {}).name || '', price: '', account: '店內現金', date: t, note: '' },
     send: { store: (S.B.stores[0] || {}).name || '', q: {}, date: t, note: '' },
     recon: { mode: '對帳', store: (reconTargets()[0] || {}).key || '', salesMonth: addMonth(curMonth(), -1), q: {}, amount: '', account: '公司營運戶', date: t, note: '' },
@@ -240,7 +240,10 @@ const chip = (on, a, v, label, extra) => `<button type="button" class="chip ${ex
 const stepper = (a, v, val, sm) => `<div class="step${sm ? ' sm' : ''}"><button type="button" data-a="${a}" data-v="${esc(v)}|-1" aria-label="減少">−</button><b>${val || 0}</b><button type="button" data-a="${a}" data-v="${esc(v)}|1" aria-label="增加">+</button></div>`;
 const field = (id, label, html) => `<label><p class="lab">${label}</p>${html}</label>`;
 const inp = (id, type, val, cls, ph) => `<input id="${id}" data-in="${id}" type="${type}" ${type === 'number' ? 'inputmode="numeric"' : ''} class="${cls || ''}" value="${esc(val)}" placeholder="${esc(ph || '')}">`;
-const dateNote = (f, key) => `<div class="grid">${field(key + '.date', '日期', inp(key + '.date', 'date', f.date))}${field(key + '.note', '備註（選填）', inp(key + '.note', 'text', f.note))}</div>`;
+const collabNote = (f) => { const ev = f.eventDate ? f.eventDate.slice(0, 7) : ''; const rc = f.date.slice(0, 7);
+  if (!ev) return f.kind === '創業顧問' ? '沒填服務日期：算在收款月份 ' + rc + ' 的收入。' : '請填活動舉辦日期：收入算在活動那個月。';
+  return ev === rc ? '算 ' + ev + ' 的收入。' : '收入算在活動那個月（' + ev + '），不是收款月份（' + rc + '）。'; };
+const dateNote = (f, key, label) => `<div class="grid">${field(key + '.date', label || '日期', inp(key + '.date', 'date', f.date))}${field(key + '.note', '備註（選填）', inp(key + '.note', 'text', f.note))}</div>`;
 const itemRows = (a, q, cats, stockLoc) => cats.map((c) => {
   const ps = byCat(c); if (!ps.length) return '';
   const n = ps.reduce((t, p) => t + (q[p.id] || 0), 0);
@@ -337,7 +340,7 @@ const FORMS = {
       <div><p class="lab">收進哪個帳戶</p><div class="chips">${recvAccs().map((a) => chip(f.account === a.name, 'set', 'course.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>
       ${accScope(f.account) === '個人' ? `<div class="hint">課程費匯進個人帳戶，會記成「代收」。之後轉回公司戶時，用「其他轉帳 › 代收款轉回」。</div>` : ''}
       <div class="sum"><span class="lab" style="margin:0" id="course-note">${esc(note)}</span></div>
-      ${dateNote(f, 'course')}`;
+      ${dateNote(f, 'course', '收款日期（錢進帳戶那天）')}`;
   },
   expense(){
     const f = S.F.expense;
@@ -360,10 +363,11 @@ const FORMS = {
     return `<h3>品牌合作</h3>
       <div class="grid g3">${['創業顧問', '活動策劃', '活動收入'].map((k) => chip(f.kind === k, 'set', 'collab.kind|' + k, k, 'sq')).join('')}</div>
       ${field('collab.party', '合作對象', inp('collab.party', 'text', f.party, '', '例：品牌或活動名稱'))}
+      ${field('collab.eventDate', f.kind === '創業顧問' ? '服務日期（選填，不填就算在收款月份）' : '活動舉辦日期', inp('collab.eventDate', 'date', f.eventDate))}
       ${field('collab.amount', '金額（含稅）', inp('collab.amount', 'number', f.amount, 'big', '0'))}
       <div><p class="lab">收進哪個帳戶</p><div class="chips">${recvAccs().map((a) => chip(f.account === a.name, 'set', 'collab.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>
-      <div class="sum"><span class="lab" style="margin:0">算店的收入，記在收款日的月份；月報會分成「品牌合作・創業顧問」等三類。</span></div>
-      ${dateNote(f, 'collab')}`;
+      <div class="sum"><span class="lab" id="collab-note" style="margin:0">${collabNote(f)}</span></div>
+      ${dateNote(f, 'collab', '收款日期（錢進帳戶那天）')}`;
   },
   consign(){
     const f = S.F.consign;
@@ -520,7 +524,7 @@ function payload(){
   if (a === 'sale') { const f = F.sale; const ps = promoState(f); return { action: 'sale', date: f.date, note: f.note, channel: f.channel, account: f.account, lines: f.cart, gifts: ps ? ps.gifts : [], promo: ps && ps.gifts.length ? ps.pr.name : '' }; }
   if (a === 'course') { const f = F.course; const auto = coursePrice(S.B.courses.find((x) => x.name === f.course), f.people); return { action: 'course', date: f.date, note: f.note, course: f.course, people: f.people, classDate: f.classDate, amount: f.amount === '' ? auto : f.amount, account: f.account, party: f.party }; }
   if (a === 'expense') { const f = F.expense; return { action: 'expense', date: f.date, note: f.note, category: f.category, amount: f.amount, account: f.account, party: f.party }; }
-  if (a === 'collab') { const f = F.collab; return { action: 'collab', date: f.date, note: f.note, kind: f.kind, party: f.party, amount: f.amount, account: f.account }; }
+  if (a === 'collab') { const f = F.collab; return { action: 'collab', date: f.date, eventDate: f.eventDate, note: f.note, kind: f.kind, party: f.party, amount: f.amount, account: f.account }; }
   if (a === 'consign') { const f = F.consign; return { action: 'consign', date: f.date, note: f.note, brand: f.brand, price: f.price, account: f.account }; }
   if (a === 'send') { const f = F.send; return { action: 'send', date: f.date, note: f.note, store: f.store, lines: Object.keys(f.q).map((id) => ({ id, qty: f.q[id] })) }; }
   if (a === 'recon') { const f = F.recon; const tg = reconTargets().find((x) => x.key === f.store) || { members: [] };
@@ -566,7 +570,7 @@ function prefill(t){
       S.action = 'sale'; break;
     }
     case '課程收款': Object.assign(F.course, base, { course: d.course, people: d.people || 1, classDate: d.classDate || '', amount: t.amount, account: t.to, party: t.party }); S.action = 'course'; break;
-    case '品牌合作': Object.assign(F.collab, base, { kind: t.category, party: t.party, amount: t.amount, account: t.to }); S.action = 'collab'; break;
+    case '品牌合作': Object.assign(F.collab, base, { kind: t.category, eventDate: d.eventDate || '', party: t.party, amount: t.amount, account: t.to }); S.action = 'collab'; break;
     case '代售': Object.assign(F.consign, base, { brand: t.party, price: t.amount, account: t.to }); S.action = 'consign'; break;
     case '支出': Object.assign(F.expense, base, { scope: t.scope === '個人' ? '個人' : '店務', category: t.category, amount: t.amount, account: t.from, party: t.party }); S.action = 'expense'; break;
     case '寄售送貨': Object.assign(F.send, base, { store: t.party, q: qOf(d.lines) }); S.action = 'send'; break;
@@ -598,7 +602,7 @@ function entryText(t){
   switch (t.action) {
     case '商品銷售': return { title: lines(d.lines), sub: (d.channel === '官網' ? '官網・' : '店內・') + t.to + (d.gifts && d.gifts.length ? '・贈 ' + lines(d.gifts) : ''), amt: '+' + money(t.amount), c: 'in-c' };
     case '課程收款': return { title: d.course, sub: d.people + ' 人・上課 ' + d.classDate + '・' + t.to, amt: '+' + money(t.amount), c: 'in-c' };
-    case '品牌合作': return { title: '品牌合作・' + t.category + (t.party ? '・' + t.party : ''), sub: '收進 ' + t.to, amt: '+' + money(t.amount), c: 'in-c' };
+    case '品牌合作': return { title: '品牌合作・' + t.category + (t.party ? '・' + t.party : ''), sub: (d.eventDate ? '活動 ' + d.eventDate + '・' : '') + '收進 ' + t.to, amt: '+' + money(t.amount), c: 'in-c' };
     case '代售': return { title: t.party + ' 代售', sub: '店的收入 ' + money((d.shop || 0) + (d.tax || 0)) + '・應付品牌 ' + money(d.brand), amt: '+' + money(t.amount), c: 'in-c' };
     case '支出': return { title: t.category, sub: (t.scope === '個人' ? '個人・' : '') + t.from + (t.party ? '・' + t.party : ''), amt: '−' + money(t.amount), c: 'out-c' };
     case '寄售送貨': return { title: '送貨到 ' + t.party, sub: lines(d.lines), amt: '庫存', c: '' };
@@ -831,7 +835,7 @@ document.addEventListener('click', (e) => { const el = e.target.closest('[data-a
 // 打字時只在需要即時試算的欄位重畫，避免手機鍵盤跳動
 const LIVE = (id) => id.indexOf('m.') === 0 || id === 'consign.price' || id === 'recon.amount';
 // 日期欄位不重畫整頁：iPhone 的日期選擇器開著時重畫，會讓選擇器失效、改不了日期
-function onDate(el){ setPath(el.dataset.in, el.value); const n = document.getElementById('course-note'); if (n && S.F.course) n.textContent = courseNote(S.F.course); }
+function onDate(el){ setPath(el.dataset.in, el.value); const n = document.getElementById('course-note'); if (n && S.F.course) n.textContent = courseNote(S.F.course); const c = document.getElementById('collab-note'); if (c && S.F.collab) c.textContent = collabNote(S.F.collab); }
 document.addEventListener('input', (e) => { const el = e.target; if (!el.dataset || !el.dataset.in) return; if (el.type === 'date') return onDate(el); setPath(el.dataset.in, el.value); if (LIVE(el.dataset.in)) render(); });
 document.addEventListener('change', (e) => { const el = e.target; if (el.dataset && el.dataset.in && el.type === 'date') onDate(el); });
 
