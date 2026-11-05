@@ -158,6 +158,7 @@ function initForms(){
     sale: { cat: '正裝', channel: '店內', account: '店內現金', cart: [], picks: [], date: t, note: '' },
     course: { course: (S.B.courses[0] || {}).name || '', people: 1, classDate: '', amount: '', account: '公司營運戶', party: '', date: t, note: '' },
     expense: { scope: '店務', category: '運費', amount: '', account: '公司營運戶', party: '', date: t, note: '' },
+    collab: { kind: '創業顧問', party: '', amount: '', account: '公司營運戶', date: t, note: '' },
     consign: { brand: (S.B.brands[0] || {}).name || '', price: '', account: '店內現金', date: t, note: '' },
     send: { store: (S.B.stores[0] || {}).name || '', q: {}, date: t, note: '' },
     recon: { mode: '對帳', store: (reconTargets()[0] || {}).key || '', salesMonth: addMonth(curMonth(), -1), q: {}, amount: '', account: '公司營運戶', date: t, note: '' },
@@ -253,6 +254,7 @@ const ACTIONS = [
   { id: 'course', label: '課程收款', sub: '先收全額', quick: true },
   { id: 'expense', label: '支出', sub: '運費・樣品・個人', quick: true },
   { id: 'consign', label: '代售', sub: '寄賣品牌賣出', quick: true },
+  { id: 'collab', label: '品牌合作', sub: '顧問・策劃・活動', quick: true },
   { id: 'gift', label: '贈品・公關品', sec: 'goods' }, { id: 'send', label: '寄售送貨', sec: 'goods' }, { id: 'split', label: '分裝', sec: 'goods' },
   { id: 'adjust', label: '庫存調整', sec: 'goods' }, { id: 'recon', label: '寄售對帳', sec: 'goods' },
   { id: 'monthly', label: '月初撥存', sub: '每月 1–5 號，依序把錢分好', sec: 'money' },
@@ -352,6 +354,16 @@ const FORMS = {
       ${warn ? `<div class="hint">${warn}</div>` : ''}
       ${field('expense.party', '對象（選填，例：黑貓、某廠商）', inp('expense.party', 'text', f.party))}
       ${dateNote(f, 'expense')}`;
+  },
+  collab(){
+    const f = S.F.collab;
+    return `<h3>品牌合作</h3>
+      <div class="grid g3">${['創業顧問', '活動策劃', '活動收入'].map((k) => chip(f.kind === k, 'set', 'collab.kind|' + k, k, 'sq')).join('')}</div>
+      ${field('collab.party', '合作對象', inp('collab.party', 'text', f.party, '', '例：品牌或活動名稱'))}
+      ${field('collab.amount', '金額（含稅）', inp('collab.amount', 'number', f.amount, 'big', '0'))}
+      <div><p class="lab">收進哪個帳戶</p><div class="chips">${recvAccs().map((a) => chip(f.account === a.name, 'set', 'collab.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>
+      <div class="sum"><span class="lab" style="margin:0">算店的收入，記在收款日的月份；月報會分成「品牌合作・創業顧問」等三類。</span></div>
+      ${dateNote(f, 'collab')}`;
   },
   consign(){
     const f = S.F.consign;
@@ -508,6 +520,7 @@ function payload(){
   if (a === 'sale') { const f = F.sale; const ps = promoState(f); return { action: 'sale', date: f.date, note: f.note, channel: f.channel, account: f.account, lines: f.cart, gifts: ps ? ps.gifts : [], promo: ps && ps.gifts.length ? ps.pr.name : '' }; }
   if (a === 'course') { const f = F.course; const auto = coursePrice(S.B.courses.find((x) => x.name === f.course), f.people); return { action: 'course', date: f.date, note: f.note, course: f.course, people: f.people, classDate: f.classDate, amount: f.amount === '' ? auto : f.amount, account: f.account, party: f.party }; }
   if (a === 'expense') { const f = F.expense; return { action: 'expense', date: f.date, note: f.note, category: f.category, amount: f.amount, account: f.account, party: f.party }; }
+  if (a === 'collab') { const f = F.collab; return { action: 'collab', date: f.date, note: f.note, kind: f.kind, party: f.party, amount: f.amount, account: f.account }; }
   if (a === 'consign') { const f = F.consign; return { action: 'consign', date: f.date, note: f.note, brand: f.brand, price: f.price, account: f.account }; }
   if (a === 'send') { const f = F.send; return { action: 'send', date: f.date, note: f.note, store: f.store, lines: Object.keys(f.q).map((id) => ({ id, qty: f.q[id] })) }; }
   if (a === 'recon') { const f = F.recon; const tg = reconTargets().find((x) => x.key === f.store) || { members: [] };
@@ -539,7 +552,7 @@ async function save(){
 
 /* ───────── 修改：把原紀錄帶回表單 ───────── */
 const qOf = (ls) => { const q = {}; (ls || []).forEach((l) => { q[l.id] = (q[l.id] || 0) + l.qty; }); return q; };
-function prefillable(t){ return ['商品銷售','課程收款','代售','支出','寄售送貨','寄售對帳','寄售收款','分裝','公關出庫','庫存調整','轉帳','月初分錢'].indexOf(t.action) > -1; }
+function prefillable(t){ return ['商品銷售','課程收款','品牌合作','代售','支出','寄售送貨','寄售對帳','寄售收款','分裝','公關出庫','庫存調整','轉帳','月初分錢'].indexOf(t.action) > -1; }
 function prefill(t){
   if (!prefillable(t)) return false;
   initForms();
@@ -553,6 +566,7 @@ function prefill(t){
       S.action = 'sale'; break;
     }
     case '課程收款': Object.assign(F.course, base, { course: d.course, people: d.people || 1, classDate: d.classDate || '', amount: t.amount, account: t.to, party: t.party }); S.action = 'course'; break;
+    case '品牌合作': Object.assign(F.collab, base, { kind: t.category, party: t.party, amount: t.amount, account: t.to }); S.action = 'collab'; break;
     case '代售': Object.assign(F.consign, base, { brand: t.party, price: t.amount, account: t.to }); S.action = 'consign'; break;
     case '支出': Object.assign(F.expense, base, { scope: t.scope === '個人' ? '個人' : '店務', category: t.category, amount: t.amount, account: t.from, party: t.party }); S.action = 'expense'; break;
     case '寄售送貨': Object.assign(F.send, base, { store: t.party, q: qOf(d.lines) }); S.action = 'send'; break;
@@ -584,6 +598,7 @@ function entryText(t){
   switch (t.action) {
     case '商品銷售': return { title: lines(d.lines), sub: (d.channel === '官網' ? '官網・' : '店內・') + t.to + (d.gifts && d.gifts.length ? '・贈 ' + lines(d.gifts) : ''), amt: '+' + money(t.amount), c: 'in-c' };
     case '課程收款': return { title: d.course, sub: d.people + ' 人・上課 ' + d.classDate + '・' + t.to, amt: '+' + money(t.amount), c: 'in-c' };
+    case '品牌合作': return { title: '品牌合作・' + t.category + (t.party ? '・' + t.party : ''), sub: '收進 ' + t.to, amt: '+' + money(t.amount), c: 'in-c' };
     case '代售': return { title: t.party + ' 代售', sub: '店的收入 ' + money((d.shop || 0) + (d.tax || 0)) + '・應付品牌 ' + money(d.brand), amt: '+' + money(t.amount), c: 'in-c' };
     case '支出': return { title: t.category, sub: (t.scope === '個人' ? '個人・' : '') + t.from + (t.party ? '・' + t.party : ''), amt: '−' + money(t.amount), c: 'out-c' };
     case '寄售送貨': return { title: '送貨到 ' + t.party, sub: lines(d.lines), amt: '庫存', c: '' };
