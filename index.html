@@ -155,7 +155,7 @@ const accScope = (n) => (S.B.accounts.find((a) => a.name === n) || {}).scope;
 function initForms(){
   const t = today();
   S.F = {
-    sale: { cat: '正裝', channel: '店內', account: '店內現金', cart: [], picks: [], date: t, note: '' },
+    sale: { cat: '正裝', channel: '店內', account: '店內現金', cart: [], picks: [], coupons: 0, date: t, note: '' },
     course: { course: (S.B.courses[0] || {}).name || '', people: 1, classDate: '', amount: '', account: '公司營運戶', party: '', date: t, note: '' },
     expense: { scope: '店務', category: '運費', amount: '', account: '公司營運戶', party: '', date: t, note: '' },
     collab: { kind: '創業顧問', eventDate: '', party: '', amount: '', account: '公司營運戶', date: t, note: '' },
@@ -312,7 +312,12 @@ const FORMS = {
       }
       promo = `<div class="promo"><div><div class="t">進行中的活動</div><b>${esc(pr.name)}</b><div class="lab" style="margin:0">${esc(pr.start)} – ${esc(pr.end)}・${esc(pr.mode)}</div></div>${body}</div>`;
     }
-    const total = f.cart.reduce((t, l) => t + (prod(l.id).price || 0) * l.qty, 0);
+    const fullQty = f.cart.filter((l) => prod(l.id).cat === '正裝').reduce((t, l) => t + l.qty, 0);
+    if (f.channel !== '店內' || f.coupons > fullQty) f.coupons = f.channel === '店內' ? fullQty : 0;
+    const cv = S.B.couponValue || 500, off = f.coupons * cv;
+    const gross = f.cart.reduce((t, l) => t + (prod(l.id).price || 0) * l.qty, 0);
+    const total = gross - off;
+    const coupon = f.channel === '店內' && fullQty ? `<div class="promo"><div><div class="t">常態活動</div><b>正裝折抵券 ${money(cv)}</b><div class="lab" style="margin:0">客人用了幾張就填幾張，一瓶正裝最多用一張</div></div><div class="row" style="border:0;padding:0"><span class="nm"><span>使用張數</span><small>${f.coupons ? '折抵 ' + money(off) : '沒有使用'}</small></span>${stepper('coupon', 'n', f.coupons)}</div></div>` : '';
     const HOLD = ['線上付款待入帳', '超商代收待入帳'];
     const payAccs = f.channel === '官網'
       ? `<div><p class="lab">客人怎麼付款</p><div class="chips">${HOLD.filter((n) => accounts().some((a) => a.name === n)).map((n) => chip(f.account === n, 'set', 'sale.account|' + n, n === '線上付款待入帳' ? '刷卡、LINE Pay、轉帳' : '超商貨到付款', 'sq')).join('')}</div></div><div class="hint" style="margin-top:6px">這筆在<b>出貨那天</b>記，收入算出貨那天。錢先記在「待入帳」，帳戶實際收到錢時，再用「錢進帳」記一次。<br>・刷卡、LINE Pay、轉帳：錢通常比出貨早到，先記「錢進帳」也沒關係。<br>・超商貨到付款：出貨後才收到錢。<br>有用 EasyStore 匯入的訂單不要在這裡重複記。</div>`
@@ -323,8 +328,8 @@ const FORMS = {
       <div class="grid g4">${ALLCATS.map((c) => chip(f.cat === c, 'set', 'sale.cat|' + c, c, 'sq')).join('')}</div>
       <div><p class="lab">點品項加入這筆（括號內為店內庫存）</p><div class="chips">${items}</div></div>
       <div style="border:1px solid var(--line);border-radius:12px;padding:2px 12px">${cart}</div>
-      ${promo}${payAccs}${warn}
-      <div class="sum"><div class="kv b"><span>${f.channel === '官網' ? '訂單金額' : '應收'}</span><span>${money(total)}</span></div><div class="kv s"><span>其中營業稅</span><span>${money(total - total / 1.05)}</span></div>${ps && ps.gifts.length ? `<div class="kv s"><span>贈品（不算收入，扣庫存）</span><span>${ps.gifts.map((g) => esc(prod(g.id).name) + '×' + g.qty).join('、')}</span></div>` : ''}</div>
+      ${coupon}${promo}${payAccs}${warn}
+      <div class="sum">${off ? `<div class="kv s"><span>原價</span><span>${money(gross)}</span></div><div class="kv s"><span>折抵券 ×${f.coupons}</span><span>−${money(off)}</span></div>` : ''}<div class="kv b"><span>${f.channel === '官網' ? '訂單金額' : '應收'}</span><span>${money(total)}</span></div><div class="kv s"><span>其中營業稅</span><span>${money(total - total / 1.05)}</span></div>${ps && ps.gifts.length ? `<div class="kv s"><span>贈品（不算收入，扣庫存）</span><span>${ps.gifts.map((g) => esc(prod(g.id).name) + '×' + g.qty).join('、')}</span></div>` : ''}</div>
       ${dateNote(f, 'sale', f.channel === '官網' ? '出貨日期' : '日期')}`;
   },
   course(){
@@ -521,7 +526,7 @@ function moneyForm(action, title, desc, numbered){
 /* ───────── 送出 ───────── */
 function payload(){
   const a = S.action, F = S.F;
-  if (a === 'sale') { const f = F.sale; const ps = promoState(f); return { action: 'sale', date: f.date, note: f.note, channel: f.channel, account: f.account, lines: f.cart, gifts: ps ? ps.gifts : [], promo: ps && ps.gifts.length ? ps.pr.name : '' }; }
+  if (a === 'sale') { const f = F.sale; const ps = promoState(f); return { action: 'sale', date: f.date, note: f.note, channel: f.channel, account: f.account, coupons: f.coupons || 0, lines: f.cart, gifts: ps ? ps.gifts : [], promo: ps && ps.gifts.length ? ps.pr.name : '' }; }
   if (a === 'course') { const f = F.course; const auto = coursePrice(S.B.courses.find((x) => x.name === f.course), f.people); return { action: 'course', date: f.date, note: f.note, course: f.course, people: f.people, classDate: f.classDate, amount: f.amount === '' ? auto : f.amount, account: f.account, party: f.party }; }
   if (a === 'expense') { const f = F.expense; return { action: 'expense', date: f.date, note: f.note, category: f.category, amount: f.amount, account: f.account, party: f.party }; }
   if (a === 'collab') { const f = F.collab; return { action: 'collab', date: f.date, eventDate: f.eventDate, note: f.note, kind: f.kind, party: f.party, amount: f.amount, account: f.account }; }
@@ -566,7 +571,7 @@ function prefill(t){
     case '商品銷售': {
       const picks = []; (d.gifts || []).forEach((g) => { for (let i = 0; i < g.qty; i++) picks.push(g.id); });
       const first = prod((d.lines || [{}])[0].id);
-      Object.assign(F.sale, base, { channel: d.channel || '店內', account: t.to, cart: (d.lines || []).map((l) => ({ id: l.id, qty: l.qty })), picks, cat: first.cat || '正裝' });
+      Object.assign(F.sale, base, { channel: d.channel || '店內', account: t.to, cart: (d.lines || []).map((l) => ({ id: l.id, qty: l.qty })), picks, coupons: d.coupons || 0, cat: first.cat || '正裝' });
       S.action = 'sale'; break;
     }
     case '課程收款': Object.assign(F.course, base, { course: d.course, people: d.people || 1, classDate: d.classDate || '', amount: t.amount, account: t.to, party: t.party }); S.action = 'course'; break;
@@ -600,7 +605,7 @@ function entryText(t){
   const d = t.d || {};
   const lines = (ls) => (ls || []).map((l) => l.name.replace('・單支', '（單支）') + '×' + l.qty).join('、');
   switch (t.action) {
-    case '商品銷售': return { title: lines(d.lines), sub: (d.channel === '官網' ? '官網・' : '店內・') + t.to + (d.gifts && d.gifts.length ? '・贈 ' + lines(d.gifts) : ''), amt: '+' + money(t.amount), c: 'in-c' };
+    case '商品銷售': return { title: lines(d.lines), sub: (d.channel === '官網' ? '官網・' : '店內・') + t.to + (d.coupons ? '・折抵券 ×' + d.coupons : '') + (d.gifts && d.gifts.length ? '・贈 ' + lines(d.gifts) : ''), amt: '+' + money(t.amount), c: 'in-c' };
     case '課程收款': return { title: d.course, sub: d.people + ' 人・上課 ' + d.classDate + '・' + t.to, amt: '+' + money(t.amount), c: 'in-c' };
     case '品牌合作': return { title: '品牌合作・' + t.category + (t.party ? '・' + t.party : ''), sub: (d.eventDate ? '活動 ' + d.eventDate + '・' : '') + '收進 ' + t.to, amt: '+' + money(t.amount), c: 'in-c' };
     case '代售': return { title: t.party + ' 代售', sub: '店的收入 ' + money((d.shop || 0) + (d.tax || 0)) + '・應付品牌 ' + money(d.brand), amt: '+' + money(t.amount), c: 'in-c' };
@@ -792,6 +797,7 @@ const H = {
   set(v){ const i = v.indexOf('|'); setPath(v.slice(0, i), v.slice(i + 1)); render(); },
   // 用位置選，不用名稱比對：名稱裡有隱藏換行時也不會選不到
   pickIdx(v){ const [path, list, i] = v.split('|'); const item = (S.B[list] || [])[+i]; if (item) setPath(path, item.name); render(); },
+  coupon(v){ const d = +v.split('|')[1]; const f = S.F.sale; f.coupons = Math.max(0, (f.coupons || 0) + d); render(); },
   saleAdd(id){ const c = S.F.sale.cart; const l = c.find((x) => x.id === id); if (l) l.qty++; else c.push({ id, qty: 1 }); render(); },
   saleQty(v){ const [id, d] = v.split('|'); const c = S.F.sale.cart; const l = c.find((x) => x.id === id); if (l) { l.qty += +d; if (l.qty <= 0) c.splice(c.indexOf(l), 1); } render(); },
   pick(v){ const [i, id] = v.split('|'); const p = S.F.sale.picks; if (p[i] === id) p[i] = ''; else if (!S.editing && stockOf('店內', id) <= 0) { toast(prod(id).name + ' 目前沒有庫存'); return; } else p[i] = id; render(); },
