@@ -439,19 +439,17 @@ const FORMS = {
     const opened = fulls.reduce((t, p) => t + o(p.id).bad + o(p.id).good, 0);
     const openedBad = fulls.reduce((t, p) => t + o(p.id).bad, 0);
     const used = kits.reduce((t, p) => t + (f.made[p.id] || 0) * 3, 0) + singles.reduce((t, p) => t + (f.made[p.id] || 0), 0);
-    const shown = fulls.reduce((t, p) => t + Math.min(f.show[p.id] || 0, o(p.id).bad + o(p.id).good), 0);
     return `<h3>分裝：拆正裝做針管</h3>
       <div class="grid g2">${series.map((s) => chip(f.series === s, 'set', 'split.series|' + s, esc(s), 'sq')).join('')}</div>
-      <div class="grp"><span>① 拆了哪些瓶（瑕疵與良品分開填）</span></div>
+      <div class="grp"><span>① 拆了哪些新瓶（瑕疵與良品分開填，展示區的不用填）</span></div>
       ${fulls.map((p) => `<div class="row" style="flex-wrap:wrap"><span class="nm" style="flex-basis:100%"><b style="font-weight:500">${esc(p.name)}</b></span>
         <div style="display:flex;flex-wrap:wrap;gap:8px;width:100%"><div style="flex:1 1 128px;display:flex;align-items:center;justify-content:space-between;background:var(--warnbg);border-radius:10px;padding:2px 4px 2px 10px"><small style="color:var(--warn);white-space:nowrap;margin-right:4px">瑕疵 剩${stockOf('店內', p.id, '瑕疵')}</small>${stepper('openBad', p.id, o(p.id).bad, 1)}</div>
         <div style="flex:1 1 128px;display:flex;align-items:center;justify-content:space-between;background:var(--paper);border-radius:10px;padding:2px 4px 2px 10px"><small style="color:var(--blue);white-space:nowrap;margin-right:4px">良品 剩${stockOf('店內', p.id)}</small>${stepper('openGood', p.id, o(p.id).good, 1)}</div></div></div>`).join('')}
       <div class="grp"><span>② 實際做出多少（自己填）</span></div>
       ${kits.map((p) => `<div class="row"><span class="nm"><span>${esc(p.name)}</span><small>一組 3 支，三款各一</small></span>${stepper('made', p.id, f.made[p.id])}</div>`).join('')}
       ${singles.map((p) => `<div class="row"><span class="nm"><span>${esc(p.name)}</span><small>單支銷售線</small></span>${stepper('made', p.id, f.made[p.id])}</div>`).join('')}
-      <div class="grp"><span>③ 沒用完的瓶子，轉為店內展示（瓶）</span></div>
-      ${fulls.map((p) => `<div class="row"><span class="nm"><span>${esc(p.name)}</span><small>這次拆了 ${o(p.id).bad + o(p.id).good} 瓶</small></span>${stepper('show', p.id, Math.min(f.show[p.id] || 0, o(p.id).bad + o(p.id).good))}</div>`).join('')}
-      <div class="sum"><div class="kv"><span>拆封正裝</span><span>${opened} 瓶（瑕疵 ${openedBad}）</span></div><div class="kv"><span>裝出的 2ml 針管</span><span>${used} 支</span></div><div class="kv"><span>轉為店內展示</span><span>${shown} 瓶</span></div><div class="kv s"><span>參考：拆的瓶數約可裝</span><span>${opened * S.B.perBottle} 支</span></div></div>
+      <div class="hint">展示區的剩香拿來分裝不用記。只有拆新的良品或瑕疵品才記在 ①。拆開的瓶子用不完就當展示瓶，不再記庫存。</div>
+      <div class="sum"><div class="kv"><span>拆封正裝</span><span>${opened} 瓶（瑕疵 ${openedBad}）</span></div><div class="kv"><span>裝出的 2ml 針管</span><span>${used} 支</span></div><div class="kv s"><span>參考：拆的瓶數約可裝</span><span>${opened * S.B.perBottle} 支</span></div></div>
       ${dateNote(f, 'split')}`;
   },
   gift(){
@@ -472,7 +470,7 @@ const FORMS = {
   settlePay(){ return moneyForm('settlePay', '付款與繳稅', '真的付出去時才記。單月份會標出要繳的營業稅。', false); },
   adjust(){
     const f = S.F.adjust;
-    const locs = ['店內', '店內展示'].concat(S.B.stores.map((s) => s.name));
+    const locs = ['店內'].concat(S.B.stores.map((s) => s.name));
     const states = f.loc === '店內展示' ? ['展示'] : f.loc === '店內' ? ['良品', '瑕疵'] : ['良品'];
     if (states.indexOf(f.state) < 0) f.state = states[0];
     const rows = ALLCATS.map((c) => { const ps = byCat(c); if (!ps.length) return '';
@@ -480,8 +478,8 @@ const FORMS = {
         return `<div class="row"><span class="nm"><span>${esc(p.name)}</span><small>目前 ${cur}${d ? ' → 調整後 ' + (cur + d) : ''}</small></span><div class="step"><button type="button" data-a="adjQ" data-v="${p.id}|-1" aria-label="減少">−</button><b>${d > 0 ? '+' + d : d}</b><button type="button" data-a="adjQ" data-v="${p.id}|1" aria-label="增加">+</button></div></div>`; }).join(''); }).join('');
     return `<h3>庫存調整</h3>
       <p class="lab" style="margin:0">用在寄售點回報期初數量、盤點對不上、破損報廢。填的是「增減幾件」，不是最後的數量。</p>
-      <div><p class="lab">店內</p><div class="chips">${locs.slice(0, 2).map((l) => chip(f.loc === l, 'set', 'adjust.loc|' + l, esc(l), 'sq')).join('')}</div></div>
-      <div><p class="lab">寄售點</p><div class="chips">${locs.slice(2).map((l) => chip(f.loc === l, 'set', 'adjust.loc|' + l, esc(l), 'sq')).join('')}</div></div>
+      <div><p class="lab">店內</p><div class="chips">${locs.slice(0, 1).map((l) => chip(f.loc === l, 'set', 'adjust.loc|' + l, esc(l), 'sq')).join('')}</div></div>
+      <div><p class="lab">寄售點</p><div class="chips">${locs.slice(1).map((l) => chip(f.loc === l, 'set', 'adjust.loc|' + l, esc(l), 'sq')).join('')}</div></div>
       <div class="chips">${states.map((s) => chip(f.state === s, 'set', 'adjust.state|' + s, s, 'sq')).join('')}</div>
       <div>${rows}</div>
       ${field('adjust.note', '原因（必填，例：模範回報期初、破損 1 瓶）', inp('adjust.note', 'text', f.note))}
@@ -649,13 +647,13 @@ function renderStock(){
     body = ALLCATS.map((c) => { const ps = byCat(c); if (!ps.length) return '';
       const rows = ps.map((p) => { const g = stockOf('店內', p.id), b = stockOf('店內', p.id, '瑕疵'), d = stockOf('店內展示', p.id, '展示');
         const cons = S.B.stores.reduce((t, s) => t + stockOf(s.name, p.id), 0);
-        const detail = c === '正裝' ? `良品 ${g}・瑕疵 ${b}・展示瓶 ${d}・寄售點 ${cons}` : `店內 ${g}・寄售點 ${cons}`;
+        const detail = c === '正裝' ? `良品 ${g}・瑕疵 ${b}・寄售點 ${cons}` : `店內 ${g}・寄售點 ${cons}`;
         return `<div class="row"><span class="nm"><b>${esc(p.name.replace('・單支', ''))}${g <= low ? '<span class="tag w">' + (g <= 0 ? '缺貨' : '偏低') + '</span>' : ''}</b><small>${detail}</small></span><b style="font-size:20px;font-variant-numeric:tabular-nums">${g + b}</b></div>`; }).join('');
       return `<div class="card" style="gap:0"><div class="grp" style="margin:0 0 4px"><span>${c}（店內）</span><span>共 ${ps.reduce((t, p) => t + stockOf('店內', p.id) + stockOf('店內', p.id, '瑕疵'), 0)}</span></div>${rows}</div>`; }).join('');
   } else {
     const place = (label, loc, st, note) => { const rows = P().map((p) => ({ p, v: stockOf(loc, p.id, st) })).filter((r) => r.v);
       return `<div class="card" style="gap:4px"><div style="display:flex;justify-content:space-between"><b>${esc(label)}</b><small style="color:var(--sub)">${rows.length ? rows.length + ' 項' : ''}</small></div><small style="color:var(--sub)">${note}</small>${rows.length ? rows.map((r) => `<div class="kv"><span>${esc(r.p.name)}</span><b>${r.v}</b></div>`).join('') : '<small style="color:var(--sub)">目前沒有紀錄</small>'}</div>`; };
-    body = place('店內・可賣', '店內', '良品', '良品正裝、針管組、單支、分裝瓶') + place('店內・瑕疵品', '店內', '瑕疵', '包裝瑕疵，優先拿來分裝') + place('店內・展示瓶', '店內展示', '展示', '拆封後沒用完的正裝，不能賣') +
+    body = place('店內・可賣', '店內', '良品', '良品正裝、針管組、單支、分裝瓶') + place('店內・瑕疵品', '店內', '瑕疵', '包裝瑕疵，優先拿來分裝') +
       S.B.stores.map((s) => place(s.name, s.name, '良品', '開帳後送貨減去對帳；期初數量回報後用「調整」補上')).join('') + locs.filter((l) => !S.B.stores.some((s) => s.name === l)).map((l) => place(l, l, '良品', '')).join('');
   }
   return `<div class="sec">${head}${body}</div>`;
