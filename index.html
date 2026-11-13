@@ -81,6 +81,7 @@ input.amt{width:104px;text-align:right;font-variant-numeric:tabular-nums}
 .tag.w{background:var(--warnbg);color:var(--warn)}
 .ent{width:100%;min-height:60px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;margin-bottom:6px}
 .ent .nm{display:flex;flex-direction:column;min-width:0}.ent b{font-size:15px}.ent small{font-size:12px;color:var(--sub)}
+.hrow{display:grid;grid-template-columns:minmax(0,1fr) 44px 56px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #EEF2F5;font-variant-numeric:tabular-nums}.hrow .nm{display:flex;flex-direction:column;min-width:0}.hrow small{font-size:11px;color:var(--sub);overflow-wrap:anywhere}.hrow>b,.hrow .bal{text-align:right}.hrow .bal{color:var(--sub);font-size:13px}
 .ent .nm{flex:1 1 auto}.ent .a{flex:none;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .ent.void{opacity:.45}.ent.void .a{text-decoration:line-through}
 .day{font-size:12px;color:var(--sub);margin:12px 0 6px}
@@ -646,9 +647,17 @@ function renderStock(){
   body = ALLCATS.map((c) => { const ps = byCat(c); if (!ps.length) return '';
       const rows = ps.map((p) => { const g = stockOf('店內', p.id), b = stockOf('店內', p.id, '瑕疵'), d = stockOf('店內展示', p.id, '展示');
         const detail = c === '正裝' ? `良品 ${g}・瑕疵 ${b}` : `店內 ${g}`;
-        return `<div class="row"><span class="nm"><b>${esc(p.name.replace('・單支', ''))}${g <= low ? '<span class="tag w">' + (g <= 0 ? '缺貨' : '偏低') + '</span>' : ''}</b><small>${detail}</small></span><b style="font-size:20px;font-variant-numeric:tabular-nums">${g + b}</b></div>`; }).join('');
+        return `<button type="button" class="row" style="width:100%;background:none;border:0;border-bottom:1px solid #EEF2F5;text-align:left;padding:0" data-a="hist" data-v="${esc(p.id)}"><span class="nm"><b>${esc(p.name.replace('・單支', ''))}${g <= low ? '<span class="tag w">' + (g <= 0 ? '缺貨' : '偏低') + '</span>' : ''}</b><small>${detail}</small></span><b style="font-size:20px;font-variant-numeric:tabular-nums">${g + b}</b></button>`; }).join('');
       return `<div class="card" style="gap:0"><div class="grp" style="margin:0 0 4px"><span>${c}（店內）</span><span>共 ${ps.reduce((t, p) => t + stockOf('店內', p.id) + stockOf('店內', p.id, '瑕疵'), 0)}</span></div>${rows}</div>`; }).join('');
-  return `<div class="sec">${head}${body}</div>`;
+  const hist = S.hist ? histCard() : '';
+  return `<div class="sec">${head}${hist}${body}</div>`;
+}
+function histCard(){
+  const h = S.hist, p = prod(h.id), full = p.cat === '正裝';
+  const rows = h.items ? h.items.slice().reverse().map((r) => `<div class="hrow"><div class="nm"><b>${esc(r.reason)}${r.state === '瑕疵' ? '<span class="tag w">瑕疵</span>' : ''}</b><small>${esc(r.date)}${r.by ? '・' + esc(r.by) : ''}${r.party ? '・' + esc(r.party) : ''}${r.note && r.note !== r.party ? '・' + esc(r.note) : ''}${r.txNote ? '・' + esc(r.txNote) : ''}</small></div><b class="${r.qty < 0 ? 'out-c' : 'in-c'}">${r.qty > 0 ? '+' : ''}${r.qty}</b><span class="bal">${full ? r.good + '／' + r.bad : r.good}</span></div>`).join('') : '<small style="color:var(--sub)">讀取中…</small>';
+  return `<div class="card" style="gap:6px"><div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(p.name)}：店內進出紀錄</b><button class="ghost" style="min-height:32px;padding:0 10px" data-a="hist" data-v="">關閉</button></div>
+    <small style="color:var(--sub)">最新的在最上面。右邊是那一筆之後的結餘${full ? '（良品／瑕疵）' : ''}。跟架上對不起來時，從上往下找哪一筆數量不對；點「明細」找到那筆就能修改或作廢。</small>
+    <div class="hrow" style="font-size:11px;color:var(--sub);border-bottom:1px solid var(--line)"><span>事項</span><span style="text-align:right">增減</span><span style="text-align:right">結餘</span></div>${rows}</div>`;
 }
 
 /* ───────── 月報 ───────── */
@@ -805,6 +814,8 @@ const H = {
   lm(d){ S.listMonth = addMonth(S.listMonth, +d); S.items = null; render(); },
   rm(d){ S.month = addMonth(S.month, +d); S.summary = null; render(); },
   sv(v){ S.stockView = +v; render(); },
+  hist(v){ if (!v || (S.hist && S.hist.id === v)) { S.hist = null; render(); return; } S.hist = { id: v }; render(); window.scrollTo({ top: 0, behavior: 'smooth' });
+    api({ action: 'history', item: v }).then((r) => { if (S.hist && S.hist.id === v) { S.hist.items = r.items || []; render(); } }).catch((e) => toast(e.message)); },
   async refresh(){ await boot(true); toast('已更新'); render(); },
   openEnt(id){ S.openEntry = S.openEntry === id ? '' : id; render(); },
   editEnt(id){
