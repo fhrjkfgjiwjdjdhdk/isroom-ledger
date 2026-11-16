@@ -1011,6 +1011,7 @@ async function loadList(){ try { const d = await api({ action: 'list', month: S.
 /* ───────── 庫存 ───────── */
 // 各類別的低庫存門檻：正裝 35、針管組 10、單支 5（試算表「設定」可改）
 const lowOf = (c) => { const v = (S.B.lowBy || {})[c]; return v === undefined ? S.B.lowStock : v; };
+const lowTip = (c) => c === '正裝' ? '盡快安排生產' : '盡快補庫存';
 const lowItems = () => !S.B ? [] : ALLCATS.reduce((o, c) => o.concat(byCat(c).filter((p) => stockOf('店內', p.id) <= lowOf(c)).map((p) => ({ name: p.name.replace('・單支', '（單支）'), qty: stockOf('店內', p.id), cat: c }))), []);
 function renderStock(){
   const kpi = (l, v) => `<div class="kpi"><span>${l}</span><b>${v}</b></div>`;
@@ -1019,14 +1020,14 @@ function renderStock(){
     <p class="lab" style="margin:0">只算店內實際有的貨；寄售點沒有盤點，所以不列。</p>
     <div class="grid g4">${kpi('正裝良品', sumCat('正裝'))}${kpi('瑕疵品', sumCat('正裝', '瑕疵'))}${kpi('針管組', sumCat('針管組'))}${kpi('單支', sumCat('單支針管'))}</div>`;
   const L = lowItems();
-  const alert = L.length ? `<div class="card" style="gap:6px;background:var(--warnbg);border-color:#EAD9B5"><b style="color:var(--warn)">需要叫貨或生產（${L.length} 項）</b>
-    ${['正裝', '針管組', '單支針管', '分裝瓶'].map((c) => { const xs = L.filter((x) => x.cat === c); return xs.length ? `<div style="font-size:14px;line-height:1.6"><b>${c}</b><small style="color:var(--warn)">（${lowOf(c)} 以下提醒）</small><br>${xs.map((x) => esc(x.name.replace('（單支）', '')) + ' <b>' + x.qty + '</b>').join('、')}</div>` : ''; }).join('')}
+  const alert = L.length ? `<div class="card" style="gap:6px;background:var(--warnbg);border-color:#EAD9B5"><b style="color:var(--warn)">庫存偏低（${L.length} 項）</b>
+    ${['正裝', '針管組', '單支針管', '分裝瓶'].map((c) => { const xs = L.filter((x) => x.cat === c); return xs.length ? `<div style="font-size:14px;line-height:1.6"><b>${c}・${lowTip(c)}</b><small style="color:var(--warn)">（${lowOf(c)} 以下提醒）</small><br>${xs.map((x) => esc(x.name.replace('（單支）', '')) + ' <b>' + x.qty + '</b>').join('、')}</div>` : ''; }).join('')}
     <small style="color:var(--warn)">正裝算良品數量。門檻可以在試算表「設定」改。</small></div>` : '';
   let body = '';
   body = ALLCATS.map((c) => { const ps = byCat(c); if (!ps.length) return '';
       const rows = ps.map((p) => { const g = stockOf('店內', p.id), b = stockOf('店內', p.id, '瑕疵'), d = stockOf('店內展示', p.id, '展示');
         const detail = c === '正裝' ? `良品 ${g}・瑕疵 ${b}` : `店內 ${g}`;
-        return `<button type="button" class="row" style="width:100%;background:none;border:0;border-bottom:1px solid #EEF2F5;text-align:left;padding:0" data-a="hist" data-v="${esc(p.id)}"><span class="nm"><b>${esc(p.name.replace('・單支', ''))}${g <= lowOf(c) ? '<span class="tag w">' + (g <= 0 ? '缺貨' : '偏低') + '</span>' : ''}</b><small>${detail}</small></span><b style="font-size:20px;font-variant-numeric:tabular-nums">${g + b}</b></button>`; }).join('');
+        return `<button type="button" class="row" style="width:100%;background:none;border:0;border-bottom:1px solid #EEF2F5;text-align:left;padding:0" data-a="hist" data-v="${esc(p.id)}"><span class="nm"><b>${esc(p.name.replace('・單支', ''))}${g <= lowOf(c) ? '<span class="tag w">' + (g <= 0 ? '缺貨' : '偏低') + '・' + lowTip(c) + '</span>' : ''}</b><small>${detail}</small></span><b style="font-size:20px;font-variant-numeric:tabular-nums">${g + b}</b></button>`; }).join('');
       return `<div class="card" style="gap:0"><div class="grp" style="margin:0 0 4px"><span>${c}（店內）</span><span>共 ${ps.reduce((t, p) => t + stockOf('店內', p.id) + stockOf('店內', p.id, '瑕疵'), 0)}</span></div>${rows}</div>`; }).join('');
   const hist = S.hist ? histCard() : '';
   return `<div class="sec">${head}${alert}${hist}${body}</div>`;
