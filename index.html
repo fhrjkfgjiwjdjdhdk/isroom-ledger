@@ -716,7 +716,7 @@ function oweCard(s){
     <div class="kv ind"><span>個人幫店付的（代墊）</span><span>−${money(o.advanced)}</span></div>
     ${o.returned ? `<div class="kv ind"><span>已經轉回店裡</span><span>−${money(o.returned)}</span></div>` : ''}
     ${o.repaid ? `<div class="kv ind"><span>店已經還給個人</span><span>${money(o.repaid)}</span></div>` : ''}
-    <p class="lab" style="margin:2px 0 0">${o.net > 0 ? '公司戶開好後，用「個人帳戶和店的往來 › 個人帳戶轉回店裡」記一筆，金額已自動帶好。' : o.net < 0 ? '用「入帳與結清 › 代墊歸還」記一筆，金額已自動帶好。' : '個人帳戶裡沒有店的錢，也沒有欠個人的錢。'}</p>
+    <p class="lab" style="margin:2px 0 0">${o.net > 0 ? '公司戶開好後，用「個人帳戶和店的往來 › 個人帳戶轉回店裡」記一筆，金額已自動帶好。' : o.net < 0 ? '用「個人帳戶和店的往來 › 代墊歸還」記一筆，金額已自動帶好。' : '個人帳戶裡沒有店的錢，也沒有欠個人的錢。'}</p>
   </div>`;
 }
 function vatCard(s){
@@ -733,7 +733,7 @@ function vatCard(s){
       <div class="kv s"><span>本月 15 日前申報${v.paidThisMonth ? '，已繳 ' + money(v.paidThisMonth) : '，尚未記繳納'}</span><span></span></div>` : ''}
     <div class="kv tot"><span>稅金預留目前</span><span>${money(v.reserve)}</span></div>
     <div class="kv b ${ok ? 'in-c' : 'out-c'}"><span>${ok ? '足夠，多出' : '還差'}</span><span>${money(Math.abs(v.gap))}</span></div>
-    <p class="lab" style="margin:2px 0 0">應提稅金＝收入裡含的 5% 營業稅，還沒扣掉進貨、房租等有統編發票的進項稅額，所以實際要繳的通常會少一些。繳稅時用「入帳與結清 › 繳營業稅」或「其他轉帳 › 營業稅繳納」記。</p>
+    <p class="lab" style="margin:2px 0 0">應提稅金＝收入裡含的 5% 營業稅，還沒扣掉進貨、房租等有統編發票的進項稅額，所以實際要繳的通常會少一些。繳稅時用「付款與繳稅 › 繳營業稅」（從稅金預留付）或「其他轉帳 › 營業稅繳納」（從其他帳戶付）記，記成「支出」系統不會認得是繳稅。</p>
   </div>`;
 }
 function itemCard(s){
