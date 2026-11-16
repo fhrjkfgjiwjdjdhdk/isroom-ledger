@@ -117,7 +117,8 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
 .qb b{font-size:15px}.qb small{color:var(--sub);font-size:12.5px;line-height:1.5}
 .qb.on{border-color:var(--deep);box-shadow:0 0 0 2px var(--deep) inset}.qb.unsure{border-style:dashed}
 .sys{font-weight:500;font-size:12.5px;color:#4C7A9A;white-space:nowrap}
-.back{background:none;border:0;color:var(--deep);font-size:14px;padding:4px 0;text-align:left;align-self:flex-start}
+.back{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;min-height:40px;padding:0 14px 0 10px;border-radius:999px;border:1px solid var(--blue);background:var(--pale);color:var(--deep);font-size:15px;font-weight:700}
+.back::before{content:'‹';font-size:22px;line-height:1;margin-top:-2px}
 .crumb{font-size:12px;color:var(--sub);letter-spacing:.05em}
 .where{display:flex;flex-wrap:wrap;gap:8px}.where .chip{flex:1 1 auto;white-space:nowrap}
 .ok{background:#E9F5EE;border-radius:12px;padding:12px;color:#1F5A3A;font-size:14px;line-height:1.6}
@@ -296,8 +297,8 @@ const ACTIONS = [
   { id: 'expense', label: '支出', sub: '運費・樣品・個人', quick: true },
   { id: 'consign', label: '代售', sub: '寄賣品牌賣出', quick: true },
   { id: 'collab', label: '品牌合作', sub: '顧問・企劃費・報名抽成', quick: true },
-  { id: 'gift', label: '贈品・公關品', sec: 'goods' }, { id: 'send', label: '寄售送貨', sec: 'goods' }, { id: 'split', label: '分裝', sec: 'goods' },
-  { id: 'adjust', label: '庫存調整', sec: 'goods' }, { id: 'recon', label: '寄售對帳', sec: 'goods' },
+  { id: 'adjust', label: '庫存調整', sec: 'goods' }, { id: 'split', label: '分裝', sec: 'goods' }, { id: 'gift', label: '贈品・公關品', sec: 'goods' },
+  { id: 'send', label: '寄售送貨', sec: 'goods' }, { id: 'recon', label: '寄售對帳', sec: 'goods' },
   { id: 'monthly', label: '月初撥存', sub: '每月 1–5 號，依序把錢分好', sec: 'money' },
   { id: 'bills', label: '繳費', sub: '帳單付出去時，從固定支出預留付', sec: 'money' },
   { id: 'settleIn', label: '錢進帳', sub: '官網款項、LINE Pay、現金存銀行', sec: 'money' },
@@ -640,7 +641,7 @@ const GOUT = [
   ['tax', '繳營業稅', '支出・營業稅', '兩個月一次'],
   ['brand', '付錢給寄賣品牌', '付款與繳稅・代售貨款', '把代售賣掉的錢付給品牌'],
   ['unsure', '不確定記在哪裡', '待確認', '先記下來，Essen 會幫你歸類']];
-const back = (v, label) => `<button type="button" class="back" data-a="pg" data-v="${v}">‹ ${label || '回首頁'}</button>`;
+const back = (v, label) => `<button type="button" class="back" data-a="pg" data-v="${v}">${label || '回首頁'}</button>`;
 const md = (d) => Number(d.slice(5, 7)) + '/' + Number(d.slice(8, 10));
 const webItem = (src) => S.B.monthItems.find((x) => x.group === '結清' && x.from === (src === 'cvs' ? '超商代收待入帳' : '線上付款待入帳'));
 const showOld = () => curMonth() <= addMonth((S.B.openDate || '2026-11-01').slice(0, 7), 1);   // 開帳後兩個月內才問「有沒有開帳前的訂單」
@@ -657,9 +658,10 @@ function esmeHome(){
   const mine = S.B.pending.filter((p) => p.user === S.user).length;
   const rec = (S.B.recent || []).map((t) => { const e = entryText(t); return `<div class="r"><span>${esc(e.title)}<br><small>${md(t.date)}・${esc(e.sub)}</small></span><b class="${e.c}">${esc(e.amt)}</b></div>`; }).join('');
   return `<div class="sec"><div class="big3">${bigBtn('in')}${bigBtn('out')}</div>
+    ${lowItems().length ? `<button type="button" class="hint" style="text-align:left;border:0;width:100%" data-a="tab" data-v="stock"><b>庫存偏低 ${lowItems().length} 項</b>：${esc(lowItems().slice(0, 4).map((x) => x.name).join('、'))}${lowItems().length > 4 ? '…' : ''}　看庫存 ›</button>` : ''}
     ${mine ? `<div class="hint">你有 ${mine} 筆「待確認」，Essen 對帳時會處理，不用再管它。</div>` : ''}
     ${rec ? `<div class="card recent"><b>你最近記的</b>${rec}</div>` : ''}
-    <p class="lab" style="text-align:center">庫存、寄售送貨、對帳、月底結算由 Essen 處理。</p></div>`;
+    <p class="lab" style="text-align:center">寄售送貨、對帳、月底結算由 Essen 處理。</p></div>`;
 }
 const bigBtn = (d) => d === 'in'
   ? `<button type="button" class="bigb in" data-a="pg" data-v="in"><i>＋</i><span><b>收到錢</b><small>賣東西、課程、品牌合作、撥款、匯款</small></span></button>`
@@ -1007,21 +1009,27 @@ function renderList(){
 async function loadList(){ try { const d = await api({ action: 'list', month: S.listMonth }); S.items = d.items; } catch(e){ S.items = []; toast(e.message); } render(); }
 
 /* ───────── 庫存 ───────── */
+// 各類別的低庫存門檻：正裝 35、針管組 10、單支 5（試算表「設定」可改）
+const lowOf = (c) => { const v = (S.B.lowBy || {})[c]; return v === undefined ? S.B.lowStock : v; };
+const lowItems = () => !S.B ? [] : ALLCATS.reduce((o, c) => o.concat(byCat(c).filter((p) => stockOf('店內', p.id) <= lowOf(c)).map((p) => ({ name: p.name.replace('・單支', '（單支）'), qty: stockOf('店內', p.id), cat: c }))), []);
 function renderStock(){
-  const low = S.B.lowStock;
   const kpi = (l, v) => `<div class="kpi"><span>${l}</span><b>${v}</b></div>`;
   const sumCat = (c, st) => byCat(c).reduce((t, p) => t + stockOf('店內', p.id, st), 0);
   const head = `<div style="display:flex;justify-content:space-between;align-items:baseline"><h2>現有庫存</h2><button class="ghost" style="min-height:36px;padding:0 12px" data-a="refresh">重新整理</button></div>
     <p class="lab" style="margin:0">只算店內實際有的貨；寄售點沒有盤點，所以不列。</p>
     <div class="grid g4">${kpi('正裝良品', sumCat('正裝'))}${kpi('瑕疵品', sumCat('正裝', '瑕疵'))}${kpi('針管組', sumCat('針管組'))}${kpi('單支', sumCat('單支針管'))}</div>`;
+  const L = lowItems();
+  const alert = L.length ? `<div class="card" style="gap:6px;background:var(--warnbg);border-color:#EAD9B5"><b style="color:var(--warn)">需要叫貨或生產（${L.length} 項）</b>
+    ${['正裝', '針管組', '單支針管', '分裝瓶'].map((c) => { const xs = L.filter((x) => x.cat === c); return xs.length ? `<div style="font-size:14px;line-height:1.6"><b>${c}</b><small style="color:var(--warn)">（${lowOf(c)} 以下提醒）</small><br>${xs.map((x) => esc(x.name.replace('（單支）', '')) + ' <b>' + x.qty + '</b>').join('、')}</div>` : ''; }).join('')}
+    <small style="color:var(--warn)">正裝算良品數量。門檻可以在試算表「設定」改。</small></div>` : '';
   let body = '';
   body = ALLCATS.map((c) => { const ps = byCat(c); if (!ps.length) return '';
       const rows = ps.map((p) => { const g = stockOf('店內', p.id), b = stockOf('店內', p.id, '瑕疵'), d = stockOf('店內展示', p.id, '展示');
         const detail = c === '正裝' ? `良品 ${g}・瑕疵 ${b}` : `店內 ${g}`;
-        return `<button type="button" class="row" style="width:100%;background:none;border:0;border-bottom:1px solid #EEF2F5;text-align:left;padding:0" data-a="hist" data-v="${esc(p.id)}"><span class="nm"><b>${esc(p.name.replace('・單支', ''))}${g <= low ? '<span class="tag w">' + (g <= 0 ? '缺貨' : '偏低') + '</span>' : ''}</b><small>${detail}</small></span><b style="font-size:20px;font-variant-numeric:tabular-nums">${g + b}</b></button>`; }).join('');
+        return `<button type="button" class="row" style="width:100%;background:none;border:0;border-bottom:1px solid #EEF2F5;text-align:left;padding:0" data-a="hist" data-v="${esc(p.id)}"><span class="nm"><b>${esc(p.name.replace('・單支', ''))}${g <= lowOf(c) ? '<span class="tag w">' + (g <= 0 ? '缺貨' : '偏低') + '</span>' : ''}</b><small>${detail}</small></span><b style="font-size:20px;font-variant-numeric:tabular-nums">${g + b}</b></button>`; }).join('');
       return `<div class="card" style="gap:0"><div class="grp" style="margin:0 0 4px"><span>${c}（店內）</span><span>共 ${ps.reduce((t, p) => t + stockOf('店內', p.id) + stockOf('店內', p.id, '瑕疵'), 0)}</span></div>${rows}</div>`; }).join('');
   const hist = S.hist ? histCard() : '';
-  return `<div class="sec">${head}${hist}${body}</div>`;
+  return `<div class="sec">${head}${alert}${hist}${body}</div>`;
 }
 function histCard(){
   const h = S.hist, p = prod(h.id), full = p.cat === '正裝';
@@ -1151,7 +1159,7 @@ function render(){
   const app = $('#app');
   const ae = document.activeElement; const fid = ae && ae.id && ae.type !== 'date' ? ae.id : ''; const sel = fid && ae.selectionStart !== undefined ? [ae.selectionStart, ae.selectionEnd] : null;
   $('#who').textContent = S.B ? '記帳人：' + S.user : '';
-  const tabs = [['add', '記一筆'], ['list', '明細'], ['stock', '庫存'], ['report', '月報']].filter((x) => !S.B || role() === 'essen' || x[0] !== 'stock');
+  const tabs = [['add', '記一筆'], ['list', '明細'], ['stock', '庫存'], ['report', '月報']];
   $('#nav').style.gridTemplateColumns = 'repeat(' + tabs.length + ',1fr)';
   $('#nav').innerHTML = tabs.map(([k, l]) => `<button class="${S.tab === k ? 'on' : ''}" data-a="tab" data-v="${k}"><i></i>${l}</button>`).join('');
   if (!S.B || S.tab === 'set') app.innerHTML = renderSet();
