@@ -82,6 +82,7 @@ input.amt{width:104px;text-align:right;font-variant-numeric:tabular-nums}
 .tag.w{background:var(--warnbg);color:var(--warn)}
 .ent{width:100%;min-height:60px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;margin-bottom:6px}
 .ent .nm{display:flex;flex-direction:column;min-width:0}.ent b{font-size:15px}.ent small{font-size:12px;color:var(--sub)}
+.iss{display:grid;grid-template-columns:36px minmax(0,1fr);gap:10px;align-items:start;padding:8px 0;border-top:1px solid #EEF2F5}.iss .tick{width:32px;height:32px}.iss .nm{display:flex;flex-direction:column;gap:2px;min-width:0}.iss small{color:var(--sub);font-size:12px;line-height:1.5}.iss.done b{color:var(--sub);text-decoration:line-through;font-weight:500}
 .hrow{display:grid;grid-template-columns:minmax(0,1fr) 44px 56px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #EEF2F5;font-variant-numeric:tabular-nums}.hrow .nm{display:flex;flex-direction:column;min-width:0}.hrow small{font-size:11px;color:var(--sub);overflow-wrap:anywhere}.hrow>b,.hrow .bal{text-align:right}.hrow .bal{color:var(--sub);font-size:13px}
 .ent .nm{flex:1 1 auto}.ent .a{flex:none;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .ent.void{opacity:.45}.ent.void .a{text-decoration:line-through}
@@ -160,7 +161,7 @@ function initForms(){
     sale: { cat: '正裝', channel: '店內', account: '店內現金', cart: [], picks: [], coupons: 0, date: t, note: '' },
     course: { course: (S.B.courses[0] || {}).name || '', people: 1, classDate: '', amount: '', account: '公司營運戶', party: '', date: t, note: '' },
     expense: { scope: '店務', category: '運費', amount: '', account: '公司營運戶', party: '', date: t, note: '' },
-    collab: { kind: '創業顧問', eventDate: '', party: '', amount: '', account: '公司營運戶', date: t, note: '' },
+    collab: { kind: '創業顧問', eventDate: '', people: '', per: '', party: '', amount: '', account: '公司營運戶', date: t, note: '' },
     consign: { brand: (S.B.brands[0] || {}).name || '', price: '', account: '店內現金', date: t, note: '' },
     send: { store: (S.B.stores[0] || {}).name || '', q: {}, date: t, note: '' },
     recon: { mode: '對帳', store: (reconTargets()[0] || {}).key || '', salesMonth: addMonth(curMonth(), -1), q: {}, amount: '', account: '公司營運戶', date: t, note: '' },
@@ -242,8 +243,9 @@ const chip = (on, a, v, label, extra) => `<button type="button" class="chip ${ex
 const stepper = (a, v, val, sm) => `<div class="step${sm ? ' sm' : ''}"><button type="button" data-a="${a}" data-v="${esc(v)}|-1" aria-label="減少">−</button><b>${val || 0}</b><button type="button" data-a="${a}" data-v="${esc(v)}|1" aria-label="增加">+</button></div>`;
 const field = (id, label, html) => `<label><p class="lab">${label}</p>${html}</label>`;
 const inp = (id, type, val, cls, ph) => `<input id="${id}" data-in="${id}" type="${type}" ${type === 'number' ? 'inputmode="numeric"' : ''} class="${cls || ''}" value="${esc(val)}" placeholder="${esc(ph || '')}">`;
+const SAMEDAY = ['活動企劃費', '報名抽成'];
 const collabNote = (f) => { const ev = f.eventDate ? f.eventDate.slice(0, 7) : ''; const rc = f.date.slice(0, 7);
-  if (!ev) return f.kind === '創業顧問' ? '沒填服務日期：算在收款月份 ' + rc + ' 的收入。' : '請填活動舉辦日期：收入算在活動那個月。';
+  if (!ev) return f.kind === '創業顧問' ? '沒填服務日期：算在收款月份 ' + rc + ' 的收入。' : f.kind === '活動企劃費' ? '企劃當天收款：算 ' + rc + ' 的收入。' : SAMEDAY.indexOf(f.kind) > -1 ? '活動當天收的錢：活動日期就是收款日期，算 ' + rc + ' 的收入。' : '請填活動舉辦日期：收入算在活動那個月。';
   return ev === rc ? '算 ' + ev + ' 的收入。' : '收入算在活動那個月（' + ev + '），不是收款月份（' + rc + '）。'; };
 const dateNote = (f, key, label) => `<div class="grid">${field(key + '.date', label || '日期', inp(key + '.date', 'date', f.date))}${field(key + '.note', '備註（選填）', inp(key + '.note', 'text', f.note))}</div>`;
 const itemRows = (a, q, cats, stockLoc) => cats.map((c) => {
@@ -293,7 +295,10 @@ function renderAdd(){
   const cur = (ACTIONS.find((a) => a.id === S.action) || {});
   const at = cur.quick ? 'quick' : cur.sec || '';
   const blk = (k, html) => html + (at === k ? form : '');
-  return `<div class="sec">${blk('quick', `<div><p class="lab">常用</p><div class="grid g2">${q}</div></div>`)}${blk('goods', `<div><p class="lab">貨品</p><div class="grid g3">${goods}</div></div>`)}${blk('money', `<div><p class="lab">店內資金</p><div class="grid g2">${money_}</div></div>`)}${at ? '' : form}</div>`;
+  const B = { quick: blk('quick', `<div><p class="lab">常用</p><div class="grid g2">${q}</div></div>`), goods: blk('goods', `<div><p class="lab">貨品</p><div class="grid g3">${goods}</div></div>`), money: blk('money', `<div><p class="lab">店內資金</p><div class="grid g2">${money_}</div></div>`) };
+  // 依分工排：管貨的人貨品在最上面；管錢的人收支、資金在上面
+  const order = homeOrder() === 'goods' ? ['goods', 'quick', 'money'] : ['quick', 'money', 'goods'];
+  return `<div class="sec">${order.map((k) => B[k]).join('')}${at ? '' : form}</div>`;
 }
 function saveLabel(){
   if (S.busy) return '記錄中…';
@@ -383,10 +388,12 @@ const FORMS = {
   collab(){
     const f = S.F.collab;
     return `<h3>品牌合作</h3>
-      <div class="grid g3">${['創業顧問', '活動策劃', '活動收入'].map((k) => chip(f.kind === k, 'set', 'collab.kind|' + k, k, 'sq')).join('')}</div>
+      <div class="chips">${['創業顧問', '活動策劃', '活動收入', '活動企劃費', '報名抽成'].map((k) => chip(f.kind === k, 'set', 'collab.kind|' + k, k, 'sq')).join('')}</div>
+      <p class="lab" style="margin:0">${({ '創業顧問': '顧問服務費', '活動策劃': '事前收的活動策劃費，收入算在活動那個月', '活動收入': '活動相關的其他收入', '活動企劃費': '做企劃當天收的企劃費，收入算在收款那個月', '報名抽成': '活動當天依報名人數抽成' })[f.kind] || ''}</p>
       ${field('collab.party', '合作對象', inp('collab.party', 'text', f.party, '', '例：品牌或活動名稱'))}
-      ${field('collab.eventDate', f.kind === '創業顧問' ? '服務日期（選填，不填就算在收款月份）' : '活動舉辦日期', inp('collab.eventDate', 'date', f.eventDate))}
-      ${field('collab.amount', '金額（含稅）', inp('collab.amount', 'number', f.amount, 'big', '0'))}
+      ${f.kind === '活動企劃費' ? '' : field('collab.eventDate', f.kind === '創業顧問' ? '服務日期（選填，不填就算在收款月份）' : SAMEDAY.indexOf(f.kind) > -1 ? '活動日期（選填，不填＝收款日期）' : '活動舉辦日期', inp('collab.eventDate', 'date', f.eventDate))}
+      ${f.kind === '報名抽成' ? `<div class="grid g2">${field('collab.people', '報名人數', inp('collab.people', 'number', f.people, '', '0'))}${field('collab.per', '每人抽成', inp('collab.per', 'number', f.per, '', '0'))}</div>
+      <div class="kv b"><span>抽成合計</span><span>${money(num(f.people) * num(f.per))}</span></div>` : field('collab.amount', '金額（含稅）', inp('collab.amount', 'number', f.amount, 'big', '0'))}
       <div><p class="lab">收進哪個帳戶</p><div class="chips">${recvAccs().map((a) => chip(f.account === a.name, 'set', 'collab.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>
       <div class="sum"><span class="lab" id="collab-note" style="margin:0">${collabNote(f)}</span></div>
       ${dateNote(f, 'collab', '收款日期（錢進帳戶那天）')}`;
@@ -530,9 +537,12 @@ function moneyForm(action, title, desc, numbered){
     const due = group === '月初' ? '' : !x.months.length ? (group === '繳費' ? '<span class="tag">每月</span>' : '') : x.months.indexOf(m) > -1 ? '<span class="tag w">本月要繳</span>' : `<span class="tag">${x.months.join('、')} 月繳</span>`;
     const route = x.kind === '轉帳' ? `${x.from} → ${x.to}` : `${x.from} 付出`;
     const changed = num(f.amounts[x.key]) !== num(x.def) ? `・預設 ${money(x.def)}` : '';
+    const cap = Math.max(0, x.bal || 0), over = group === '結清' && /待入帳$/.test(x.from) && on ? num(f.amounts[x.key]) - cap : 0;
+    const split = over > 0 ? `<div class="hint" style="grid-column:1/-1;margin-top:6px">比待入帳多 ${money(over)}（系統裡還沒進帳的只有 ${money(cap)}）。多出來的通常是開帳日以前訂單的錢，或這筆已經記過。
+      <div style="margin-top:6px">${chip(!!(f.split || {})[x.key], 'msplit', x.key, '把多出的 ' + money(over) + ' 記成「期初資金」', 'sq')}</div></div>` : '';
     return `<div class="mi ${on ? 'on' : ''}"><button type="button" class="tick ${on ? 'on' : ''}" data-a="mtick" data-v="${x.key}" aria-label="${on ? '取消' : ''}勾選 ${esc(x.label)}">${on ? '✓' : (numbered ? i + 1 : '')}</button>
       <span class="nm"><b>${esc(x.label)}${due}</b><small>${esc(route)}${changed}</small></span>
-      <label><span class="sr">${esc(x.label)} 金額</span><input class="amt" id="m.${x.key}" data-in="m.${x.key}" type="number" inputmode="numeric" value="${esc(f.amounts[x.key])}"></label>${x.note && group !== '繳費' ? `<small class="mnote">${esc(x.note)}</small>` : ''}</div>`; };
+      <label><span class="sr">${esc(x.label)} 金額</span><input class="amt" id="m.${x.key}" data-in="m.${x.key}" type="number" inputmode="numeric" value="${esc(f.amounts[x.key])}"></label>${x.note && group !== '繳費' ? `<small class="mnote">${esc(x.note)}</small>` : ''}</div>${split}`; };
   const total = items.filter((x) => f.ticks[x.key]).reduce((t, x) => t + num(f.amounts[x.key]), 0);
   const list = items.map(row).join('');
   return `<h3>${title}</h3><p class="lab" style="margin:0">${desc}</p>
@@ -548,7 +558,7 @@ function payload(){
   if (a === 'course') { const f = F.course; const auto = coursePrice(S.B.courses.find((x) => x.name === f.course), f.people); return { action: 'course', date: f.date, note: f.note, course: f.course, people: f.people, classDate: f.classDate, amount: f.amount === '' ? auto : f.amount, account: f.account, party: f.party }; }
   if (a === 'expense' && F.expense.scope === '店務' && F.expense.category === '營業稅') { const f = F.expense; return { action: 'transfer', date: f.date, note: f.note, category: '營業稅繳納', from: f.account, to: '', amount: f.amount }; }
   if (a === 'expense') { const f = F.expense; return { action: 'expense', date: f.date, note: f.note, category: f.category, amount: f.amount, account: f.account, party: f.party }; }
-  if (a === 'collab') { const f = F.collab; return { action: 'collab', date: f.date, eventDate: f.eventDate, note: f.note, kind: f.kind, party: f.party, amount: f.amount, account: f.account }; }
+  if (a === 'collab') { const f = F.collab; return { action: 'collab', date: f.date, eventDate: f.eventDate, note: f.note, kind: f.kind, party: f.party, amount: f.kind === '報名抽成' ? num(f.people) * num(f.per) : f.amount, people: f.people, per: f.per, account: f.account }; }
   if (a === 'consign') { const f = F.consign; return { action: 'consign', date: f.date, note: f.note, brand: f.brand, price: f.price, account: f.account }; }
   if (a === 'send') { const f = F.send; return { action: 'send', date: f.date, note: f.note, store: f.store, lines: Object.keys(f.q).map((id) => ({ id, qty: f.q[id] })) }; }
   if (a === 'recon') { const f = F.recon; const tg = reconTargets().find((x) => x.key === f.store) || { members: [] };
@@ -556,7 +566,9 @@ function payload(){
       : { action: 'recon', date: f.date, note: f.note, store: f.store, salesMonth: f.salesMonth, lines: Object.keys(f.q).map((k) => { const [i, id] = k.split(':'); return { id, qty: f.q[k], store: (tg.members[+i] || {}).name }; }) }; }
   if (a === 'split') { const f = F.split; return { action: 'split', date: f.date, note: f.note, series: f.series, opens: Object.keys(f.open).map((id) => ({ id, bad: f.open[id].bad, good: f.open[id].good, show: f.show[id] || 0 })), made: Object.keys(f.made).map((id) => ({ id, qty: f.made[id] })) }; }
   if (a === 'gift') { const f = F.gift; return { action: 'gift', date: f.date, note: f.note, party: f.party, lines: Object.keys(f.q).map((id) => ({ id, qty: f.q[id] })) }; }
-  if (MGROUP[a]) { const f = F.monthly; return { action: 'transfers', date: f.date, items: itemsOf(a).filter((x) => f.ticks[x.key] && num(f.amounts[x.key]) > 0).map((x) => ({ key: x.key, amount: f.amounts[x.key] })) }; }
+  if (MGROUP[a]) { const f = F.monthly; return { action: 'transfers', date: f.date, items: itemsOf(a).filter((x) => f.ticks[x.key] && num(f.amounts[x.key]) > 0).map((x) => {
+    const amt = num(f.amounts[x.key]), cap = Math.max(0, x.bal || 0);
+    return (f.split || {})[x.key] && /待入帳$/.test(x.from) && amt > cap ? { key: x.key, amount: cap, opening: amt - cap } : { key: x.key, amount: amt }; }) }; }
   if (a === 'adjust') { const f = F.adjust; return { action: 'adjust', date: f.date, note: f.note, loc: f.loc, state: f.state, lines: Object.keys(f.q).map((id) => ({ id, qty: f.q[id] })) }; }
   if (a === 'transfer') { const f = F.transfer; return { action: 'transfer', date: f.date, note: f.note, category: f.category, from: f.from, to: f.to, amount: f.amount }; }
 }
@@ -567,7 +579,11 @@ async function save(){
     const tx = payload();
     const wasEdit = !!S.editing;
     if (wasEdit) tx.replaceId = S.editing.id;
-    const r = await api({ action: 'add', tx });
+    let r;
+    try { r = await api({ action: 'add', tx }); }
+    catch (e) { if (String(e.message).indexOf('DUP|') !== 0) throw e;
+      if (!confirm(e.message.slice(4))) { S.busy = false; render(); return; }
+      r = await api({ action: 'add', tx: Object.assign({}, tx, { force: true }) }); }
     const back = tx.date && tx.date < new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10) ? '（日期 ' + tx.date.slice(5).replace('-', '/') + '，明細在那天底下）' : '';
     toast((wasEdit ? '已修改' : '已記下' + (r.result.count > 1 ? ' ' + r.result.count + ' 筆' : '')) + back);
     if (wasEdit) { S.editing = null; S.action = ''; S.tab = 'list'; S.openEntry = ''; }
@@ -595,7 +611,7 @@ function prefill(t){
       S.action = 'sale'; break;
     }
     case '課程收款': Object.assign(F.course, base, { course: d.course, people: d.people || 1, classDate: d.classDate || '', amount: t.amount, account: t.to, party: t.party }); S.action = 'course'; break;
-    case '品牌合作': Object.assign(F.collab, base, { kind: t.category, eventDate: d.eventDate || '', party: t.party, amount: t.amount, account: t.to }); S.action = 'collab'; break;
+    case '品牌合作': Object.assign(F.collab, base, { kind: t.category, eventDate: d.eventDate || '', people: d.people || '', per: d.per || '', party: t.party, amount: t.amount, account: t.to }); S.action = 'collab'; break;
     case '代售': Object.assign(F.consign, base, { brand: t.party, price: t.amount, account: t.to }); S.action = 'consign'; break;
     case '支出': Object.assign(F.expense, base, { scope: t.scope === '個人' ? '個人' : '店務', category: t.category, amount: t.amount, account: t.from, party: t.party }); S.action = 'expense'; break;
     case '寄售送貨': Object.assign(F.send, base, { store: t.party, q: qOf(d.lines) }); S.action = 'send'; break;
@@ -711,7 +727,7 @@ function renderReport(){
   if (s.pending.receivable > 0) pend.push(kv('寄售應收未收', s.pending.receivable));
   if (s.pending.personalFromShop > 0) pend.push(kv('本月用店帳戶付的個人開銷', s.pending.personalFromShop));
   if (s.pending.missingRecon.length) pend.push(`<div class="kv"><span>本月還沒對帳</span><span>${esc(s.pending.missingRecon.join('、'))}</span></div>`);
-  return `<div class="sec">${nav}
+  return `<div class="sec">${nav}${issuesCard()}
     <div class="card pl"><p class="lab" style="margin:0">一層一層往下扣：灰框是要扣掉的錢，色條是扣完剩下的（負數會變橘色）。</p>
       <div class="blk">${kv('收入（含稅）', s.revenue, 'b')}${det(s.revenueBy)}</div>
       ${grp(minus('營業稅（5%）', s.tax) + minus('寄售點抽成', s.commission) + minus('商品成本', s.cogs) + det(s.cogsBy))}
@@ -733,6 +749,18 @@ function renderReport(){
     <div class="card" style="gap:4px"><p class="lab" style="margin:0">月底帳戶餘額（和銀行、LINE Pay 對一次）</p>${s.balances.map((b) => `<div class="kv"><span>${esc(b.name)}${b.scope === '個人' ? '<span class="tag">個人</span>' : ''}</span><span class="${b.balance < 0 ? 'out-c' : ''}">${money(b.balance)}</span></div>${/待入帳$/.test(b.name) ? `<small class="lab" style="margin:-2px 0 4px">${b.balance > 0 ? '平台還欠你的錢' : b.balance < 0 ? '錢已經收了，但還有貨沒出' : '錢和貨都對上了'}</small>` : ''}`).join('')}<p class="lab" style="margin:4px 0 0">兩個「待入帳」帳戶：正數：平台還欠你的錢。負數：錢已經收了，但還有貨沒出。</p></div>
     ${itemCard(s)}
     ${s.personal ? `<div class="card" style="gap:4px"><p class="lab" style="margin:0">主理人個人支出</p>${kv('合計', s.personal, 'b')}${sub(s.personalBy)}</div>` : ''}
+  </div>`;
+}
+function issuesCard(){
+  const L = S.issues || []; if (!L.length) return '';
+  const open = L.map((x, i) => [x, i]).filter(([x]) => !x.done), done = L.map((x, i) => [x, i]).filter(([x]) => x.done);
+  const item = ([x, i]) => `<div class="iss ${x.done ? 'done' : ''}"><button type="button" class="tick ${x.done ? 'on' : ''}" data-a="ack" data-v="${i}" aria-label="${x.done ? '改回未處理' : '標記已處理'}">${x.done ? '✓' : ''}</button>
+    <span class="nm"><b>${esc(x.title)}</b><small>${esc(x.detail)}${x.done && x.by ? '（' + esc(x.by) + ' ' + esc(x.at || '') + ' 標記已處理）' : ''}</small></span></div>`;
+  return `<div class="card" style="gap:8px;border-color:${open.length ? '#E7B97C' : 'var(--line)'}">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><b>需要處理</b><small style="color:var(--sub)">${open.length ? open.length + ' 項待處理' : '本月沒有待處理的項目'}</small></div>
+    ${open.length ? '<small style="color:var(--sub)">系統自動檢查出來的。處理好、或確認沒問題，就點左邊方框勾起來。</small>' : ''}
+    ${open.map(item).join('')}
+    ${done.length ? `<button type="button" class="ghost" style="min-height:36px;font-size:13px;color:var(--sub)" data-a="ackOpen">${S.ackOpen ? '收起' : '查看'}已處理的 ${done.length} 項</button>${S.ackOpen ? done.map(item).join('') : ''}` : ''}
   </div>`;
 }
 function oweCard(s){
@@ -777,9 +805,13 @@ function itemCard(s){
   return `<div class="card" style="gap:0"><p class="lab" style="margin:0">各品項銷售（件數）</p>${any ? body : '<p class="lab" style="margin:8px 0 0">這個月還沒有銷售紀錄</p>'}
     <p class="lab" style="margin:10px 0 0">寄售依報表的銷售月份計；贈出包含活動贈品與公關出庫，不算在合計裡。金額為原價合計，未扣折扣。</p></div>`;
 }
-async function loadSummary(){ try { const d = await api({ action: 'summary', month: S.month }); S.summary = d.summary; } catch(e){ toast(e.message); S.summary = { month: S.month, error: true }; } render(); }
+async function loadSummary(){ try { const d = await api({ action: 'summary', month: S.month }); S.summary = d.summary; S.issues = d.issues || []; } catch(e){ toast(e.message); S.summary = { month: S.month, error: true }; } render(); }
 
 /* ───────── 設定 ───────── */
+function homeOrder(){
+  if (!S.home) { try { S.home = localStorage.getItem('ledger.home') || ''; } catch(e){} }
+  return S.home || (S.user === 'Essen' ? 'goods' : 'money');
+}
 function renderSet(){
   return `<div class="sec"><div class="card"><h3>連線設定</h3>
     ${field('cfg.url', 'API 網址（Apps Script 部署後 /exec 結尾的網址）', `<input id="cfg.url" type="url" value="${esc(S.url)}" placeholder="https://script.google.com/macros/s/…/exec">`)}
@@ -787,7 +819,9 @@ function renderSet(){
     ${field('cfg.pin', 'PIN', `<input id="cfg.pin" type="password" value="${esc(S.pin)}">`)}
     <button class="save" data-a="login">儲存並連線</button>
     <button class="ghost" data-a="logout">清除這台裝置的設定</button>
-    <p class="lab">這些資料只存在這台裝置的瀏覽器裡，不會出現在 GitHub 上。</p></div></div>`;
+    <p class="lab">這些資料只存在這台裝置的瀏覽器裡，不會出現在 GitHub 上。</p></div>
+    <div class="card"><h3>記一筆的首頁排列</h3><p class="lab" style="margin:0">依你負責的工作，把最常用的區塊放最上面（只影響這台裝置）。</p>
+      <div class="grid g2">${chip(homeOrder() === 'money', 'home', 'money', '<b>收支優先</b><small>常用、店內資金在上面</small>', 'sq two')}${chip(homeOrder() === 'goods', 'home', 'goods', '<b>貨品優先</b><small>寄售、分裝、庫存在上面</small>', 'sq two')}</div></div></div>`;
 }
 
 /* ───────── 主繪製 ───────── */
@@ -844,6 +878,11 @@ const H = {
   mtick(k){ S.F.monthly.ticks[k] = !S.F.monthly.ticks[k]; render(); },
   save(){ save(); },
   lo(v){ S.listOrder = v; render(); },
+  msplit(k){ const f = S.F.monthly; f.split = f.split || {}; f.split[k] = !f.split[k]; render(); },
+  async ack(i){ const x = (S.issues || [])[+i]; if (!x) return; const done = !x.done; x.done = done; x.by = done ? S.user : ''; render();
+    try { await api({ action: 'ack', key: x.key, done, title: x.title }); } catch(e){ x.done = !done; toast(e.message); render(); } },
+  ackOpen(){ S.ackOpen = !S.ackOpen; render(); },
+  home(v){ S.home = v; try { localStorage.setItem('ledger.home', v); } catch(e){} render(); },
   sv0(){ S.showVoid = !S.showVoid; render(); },
   lm(d){ S.listMonth = addMonth(S.listMonth, +d); S.items = null; render(); },
   rm(d){ S.month = addMonth(S.month, +d); S.summary = null; render(); },
@@ -874,7 +913,7 @@ const H = {
 };
 document.addEventListener('click', (e) => { const el = e.target.closest('[data-a]'); if (!el) return; const fn = H[el.dataset.a]; if (fn) fn(el.dataset.v); });
 // 打字時只在需要即時試算的欄位重畫，避免手機鍵盤跳動
-const LIVE = (id) => id.indexOf('m.') === 0 || id === 'consign.price' || id === 'recon.amount';
+const LIVE = (id) => id.indexOf('m.') === 0 || id === 'consign.price' || id === 'recon.amount' || id === 'collab.people' || id === 'collab.per';
 // 日期欄位不重畫整頁：iPhone 的日期選擇器開著時重畫，會讓選擇器失效、改不了日期
 function onDate(el){ setPath(el.dataset.in, el.value); const n = document.getElementById('course-note'); if (n && S.F.course) n.textContent = courseNote(S.F.course); const c = document.getElementById('collab-note'); if (c && S.F.collab) c.textContent = collabNote(S.F.collab); }
 document.addEventListener('input', (e) => { const el = e.target; if (!el.dataset || !el.dataset.in) return; if (el.type === 'date') return onDate(el); setPath(el.dataset.in, el.value); if (LIVE(el.dataset.in)) render(); });
