@@ -41,6 +41,7 @@ h3{margin:0;font-size:16px}
 .chip.on{background:var(--blue);border-color:var(--blue);color:#fff}
 .chip.off{background:#F4F6F8;color:#8795A3;border-style:dashed}
 .chip small{opacity:.7;font-size:12px;margin-left:2px}
+.chip.two{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;text-align:left;padding:10px 12px;gap:2px;line-height:1.35}.chip.two small{margin:0;font-size:12px}
 .row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:48px;border-bottom:1px solid #EEF2F5}
 .row:last-child{border-bottom:0}
 .row .nm{display:flex;flex-direction:column;min-width:0;flex:1}.row .nm small{font-size:11px;color:var(--sub)}
@@ -272,6 +273,12 @@ const ACTIONS = [
 const MGROUP = { monthly: '月初', bills: '繳費', settleIn: '結清', settleOwe: '結清', settlePay: '結清' };
 const settleSec = (x) => /待入帳$/.test(x.from) || ['店內現金', 'LINE Pay'].indexOf(x.from) > -1 ? 'settleIn' : ['代收款轉回', '代墊歸還'].indexOf(x.category) > -1 ? 'settleOwe' : 'settlePay';
 // 收錢時可以選的帳戶：店的收款帳戶＋個人帳戶（待入帳只給官網訂單用）
+const FIXED_BILLS = ['房租', '網路', '電費', '水費', '勞健保', '發票機'];
+// 付錢時一般可選的帳戶（不含待入帳、各種預留）
+const payAccs = () => accounts().filter((a) => ['收款', '營運', '個人'].indexOf(a.kind) > -1 && !/待入帳$/.test(a.name));
+const expenseAccs = (f) => { const base = payAccs(); if (f.scope !== '店務') return base;
+  const extra = f.category === '營業稅' ? ['稅金預留'] : FIXED_BILLS.indexOf(f.category) > -1 ? ['固定支出預留'] : [];
+  return accounts().filter((a) => extra.indexOf(a.name) > -1).concat(base); };
 const recvAccs = () => accounts().filter((a) => ['收款', '營運', '個人'].indexOf(a.kind) > -1 && !/待入帳$/.test(a.name));
 const itemsOf = (a) => S.B.monthItems.filter((x) => x.group === MGROUP[a] && (x.group !== '結清' || settleSec(x) === a));
 
@@ -350,19 +357,27 @@ const FORMS = {
   },
   expense(){
     const f = S.F.expense;
-    const groups = f.scope === '店務' ? ['營業費用', '營業成本'] : ['個人支出'];
-    const cats = S.B.categories.filter((c) => groups.indexOf(c.group) > -1);
-    const accs = accounts().filter((a) => f.scope === '個人' ? true : a.kind !== '稅金');
-    const warn = f.scope === '店務' && accScope(f.account) === '個人' ? '用個人的錢付店的支出，會自動記成「代墊」，月報會累計未還金額。'
+    const all = S.B.categories;
+    const groups = f.scope === '店務'
+      ? [['固定帳單', all.filter((c) => FIXED_BILLS.indexOf(c.name) > -1).map((c) => c.name)],
+         ['進貨與製作', all.filter((c) => c.group === '營業成本').map((c) => c.name)],
+         ['日常開銷', all.filter((c) => c.group === '營業費用' && FIXED_BILLS.indexOf(c.name) < 0).map((c) => c.name)],
+         ['稅金', ['營業稅']]]
+      : [['個人支出', all.filter((c) => c.group === '個人支出').map((c) => c.name)]];
+    const accs = expenseAccs(f);
+    const isTax = f.scope === '店務' && f.category === '營業稅';
+    const warn = isTax ? '這筆會記成「繳營業稅」，不算費用（收入裡的 5% 已經先扣過了）。從稅金預留付是正常情況；用個人帳戶付會自動算成代墊，之後店再還。'
+      : f.scope === '店務' && accScope(f.account) === '個人' ? '用個人的錢付店的支出，會自動記成「代墊」，月報會累計未還金額。'
+      : f.scope === '店務' && f.account === '固定支出預留' ? '從每月撥存的「固定支出預留」付，不會動到營運的錢。'
       : f.scope === '個人' && accScope(f.account) === '店務' ? '個人開銷從店的帳戶付出，等於直接從店裡拿錢。比較乾淨的做法：先發薪水到個人帳戶，再從個人帳戶付。' : '';
     return `<h3>支出</h3>
       <div class="grid g2">${chip(f.scope === '店務', 'set', 'expense.scope|店務', '店務', 'sq')}${chip(f.scope === '個人', 'set', 'expense.scope|個人', '個人', 'sq')}</div>
-      ${groups.map((g) => `<div><p class="lab">${g}</p><div class="chips">${cats.filter((c) => c.group === g).map((c) => chip(f.category === c.name, 'set', 'expense.category|' + c.name, esc(c.name))).join('')}</div></div>`).join('')}
+      ${groups.filter((g) => g[1].length).map(([g, names]) => `<div><p class="lab">${g}</p><div class="chips">${names.map((n) => chip(f.category === n, 'set', 'expense.category|' + n, esc(n))).join('')}</div></div>`).join('')}
       ${field('expense.amount', '金額（照收據填）', inp('expense.amount', 'number', f.amount, 'big', '0'))}
       <div><p class="lab">用哪個帳戶付</p><div class="chips">${accs.map((a) => chip(f.account === a.name, 'set', 'expense.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>
       ${warn ? `<div class="hint">${warn}</div>` : ''}
       ${f.category === '運費' ? `<div><p class="lab">寄件方式（點一下帶入對象）</p><div class="grid g4">${['全家', '萊爾富', '郵局', '黑貓'].map((k) => chip(f.party === k, 'set', 'expense.party|' + k, k, 'sq')).join('')}</div></div>` : ''}
-      ${field('expense.party', '對象（選填，例：黑貓、某廠商）', inp('expense.party', 'text', f.party))}
+      ${isTax ? '' : field('expense.party', '對象（選填，例：黑貓、某廠商）', inp('expense.party', 'text', f.party))}
       ${dateNote(f, 'expense')}`;
   },
   collab(){
@@ -489,12 +504,15 @@ const FORMS = {
   },
   transfer(){
     const f = S.F.transfer;
-    const cats = ['帳戶間轉帳', '期初資金', '業主投入資金', '代收款轉回', '代墊歸還', '業主薪資提取', '撥存', '代售貨款支付', '營業稅繳納'];
-    const accs = accounts();
+    const DESC = { '帳戶間轉帳': '店裡帳戶之間搬錢，例：現金存銀行、LINE Pay 撥進銀行', '業主投入資金': '業主從個人存款拿錢補進店裡', '業主薪資提取': '業主從店裡領錢（薪水或分紅）', '期初資金': '開帳時的存款，或開帳日以前的舊帳的錢（例：10 月訂單的匯款）' };
+    const cats = ['帳戶間轉帳', '業主投入資金', '業主薪資提取', '期初資金'];
+    if (cats.indexOf(f.category) < 0) cats.push(f.category);   // 修改舊紀錄時保留原本的類別
+    const accs = accounts().filter((a) => !/待入帳$/.test(a.name) || a.name === f.from || a.name === f.to);
     const hint = { '期初資金': '新帳戶開好、把現有的錢存進去時用。只填「轉入帳戶」。', '業主投入資金': '從個人存款補錢進店裡。', '代收款轉回': '店的收入之前進了個人帳戶，現在轉回店的帳戶。', '代墊歸還': '店還你之前代墊的錢。', '帳戶間轉帳': '例如現金存銀行、店內 LINE Pay 入帳。', '業主薪資提取': '店發薪水給主理人。', '撥存': '存進稅金、固定支出、原料或耗材預留帳戶。', '代售貨款支付': '付給代售品牌的貨款，只選「轉出帳戶」。', '營業稅繳納': '申報營業稅時繳的錢，通常從「稅金預留」付出，只選「轉出帳戶」。' }[f.category];
     return `<h3>其他轉帳</h3>
-      <div class="chips">${cats.map((c) => chip(f.category === c, 'set', 'transfer.category|' + c, c)).join('')}</div>
-      <p class="lab" style="margin:0">${esc(hint)}</p>
+      <div class="grid g2">${cats.map((c) => chip(f.category === c, 'set', 'transfer.category|' + c, '<b>' + esc(c) + '</b>' + (DESC[c] ? '<small>' + esc(DESC[c]) + '</small>' : ''), 'sq two')).join('')}</div>
+      ${f.category === '期初資金' ? '<p class="lab" style="margin:0">只要選「轉入帳戶」，不算收入。</p>' : ''}
+      <p class="lab" style="margin:0">繳營業稅請用「支出 › 稅金 › 營業稅」；轉回店裡、代墊歸還在「個人帳戶和店的往來」；撥存在「月初撥存」；代售品牌貨款在「付款與繳稅」。</p>
       ${f.category === '期初資金' ? '' : `<div><p class="lab">轉出帳戶</p><div class="chips">${accs.map((a) => chip(f.from === a.name, 'set', 'transfer.from|' + a.name, esc(a.name))).join('')}</div></div>`}
       ${f.category === '代售貨款支付' || f.category === '營業稅繳納' ? '' : `<div><p class="lab">轉入帳戶</p><div class="chips">${accs.map((a) => chip(f.to === a.name, 'set', 'transfer.to|' + a.name, esc(a.name))).join('')}</div></div>`}
       ${field('transfer.amount', '金額', inp('transfer.amount', 'number', f.amount, 'big', '0'))}
@@ -528,6 +546,7 @@ function payload(){
   const a = S.action, F = S.F;
   if (a === 'sale') { const f = F.sale; const ps = promoState(f); return { action: 'sale', date: f.date, note: f.note, channel: f.channel, account: f.account, coupons: f.coupons || 0, lines: f.cart, gifts: ps ? ps.gifts : [], promo: ps && ps.gifts.length ? ps.pr.name : '' }; }
   if (a === 'course') { const f = F.course; const auto = coursePrice(S.B.courses.find((x) => x.name === f.course), f.people); return { action: 'course', date: f.date, note: f.note, course: f.course, people: f.people, classDate: f.classDate, amount: f.amount === '' ? auto : f.amount, account: f.account, party: f.party }; }
+  if (a === 'expense' && F.expense.scope === '店務' && F.expense.category === '營業稅') { const f = F.expense; return { action: 'transfer', date: f.date, note: f.note, category: '營業稅繳納', from: f.account, to: '', amount: f.amount }; }
   if (a === 'expense') { const f = F.expense; return { action: 'expense', date: f.date, note: f.note, category: f.category, amount: f.amount, account: f.account, party: f.party }; }
   if (a === 'collab') { const f = F.collab; return { action: 'collab', date: f.date, eventDate: f.eventDate, note: f.note, kind: f.kind, party: f.party, amount: f.amount, account: f.account }; }
   if (a === 'consign') { const f = F.consign; return { action: 'consign', date: f.date, note: f.note, brand: f.brand, price: f.price, account: f.account }; }
@@ -594,6 +613,7 @@ function prefill(t){
     case '庫存調整': { const [loc, state] = String(t.party).split('・'); Object.assign(F.adjust, base, { loc, state: state || '良品', q: qOf(d.lines) }); S.action = 'adjust'; break; }
     default: // 轉帳、月初分錢的單筆
       if (t.flow === '支出') { Object.assign(F.expense, base, { scope: t.scope === '個人' ? '個人' : '店務', category: t.category, amount: t.amount, account: t.from, party: t.party }); S.action = 'expense'; }
+      else if (t.flow === '付款' && t.category === '營業稅繳納') { Object.assign(F.expense, base, { scope: '店務', category: '營業稅', amount: t.amount, account: t.from, party: '' }); S.action = 'expense'; }
       else if (t.flow === '付款') { Object.assign(F.transfer, base, { category: '代售貨款支付', from: t.from, to: '', amount: t.amount }); S.action = 'transfer'; }
       else { Object.assign(F.transfer, base, { category: t.category, from: t.from, to: t.to, amount: t.amount }); S.action = 'transfer'; }
   }
@@ -784,6 +804,9 @@ function setPath(path, val){
   if (['people'].indexOf(key) > -1) val = Number(val);
   if (form === 'sale' && key === 'cat') { f.cat = val; return; }
   if (form === 'sale' && key === 'channel') { f.channel = val; f.account = val === '官網' ? '線上付款待入帳' : '店內現金'; return; }
+  if (form === 'expense' && key === 'category') { f.category = val; if (f.scope === '店務') {
+      if (val === '營業稅') f.account = '稅金預留'; else if (FIXED_BILLS.indexOf(val) > -1) f.account = '固定支出預留';
+      else if (['稅金預留', '固定支出預留'].indexOf(f.account) > -1) f.account = '公司營運戶'; } return; }
   if (form === 'expense' && key === 'scope') { f.scope = val; f.category = val === '店務' ? '運費' : '餐飲'; f.account = val === '店務' ? '公司營運戶' : '個人帳戶'; return; }
   if (form === 'course' && (key === 'course' || key === 'people')) f.amount = '';
   if (form === 'split' && key === 'series') { f.open = {}; f.made = {}; f.show = {}; }
