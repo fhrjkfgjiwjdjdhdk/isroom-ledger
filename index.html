@@ -139,6 +139,24 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
 .blk2{border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px;font-variant-numeric:tabular-nums}.blk2 small{color:var(--sub);font-size:12.5px;line-height:1.5}.blk2 .chip{align-self:flex-start}
 .fc{border-color:var(--blue)}
 .pend .card,.card .card{padding:12px}
+.mt.wide{grid-column:1/-1}
+.tag.b{background:#E3EEF8;color:#2F5F8A}.tag.g{background:#E4F2EA;color:#1F7A4D}.bprog{display:flex;flex-wrap:wrap;gap:6px}.vtab{display:grid;grid-template-columns:1fr auto auto auto;gap:3px 14px;font-size:13px;font-variant-numeric:tabular-nums;background:#F7F9FB;border-radius:10px;padding:8px 10px}.vtab span:not(:nth-child(4n+1)){text-align:right}.vtab .h{color:var(--sub);font-size:11.5px}.paybox{border:1px dashed var(--blue);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;background:#F7FAFD}.bbtn{margin-left:auto;display:flex;gap:6px}.bn .bbtn .chip{margin-left:0}
+.ptabs{display:flex;gap:6px}.ptabs .chip{flex:1 1 auto;padding:0 6px;white-space:nowrap;min-width:0}
+.prow.col{flex-direction:column;align-items:stretch;gap:6px}
+.calc{background:#F4F7FA;border-radius:10px;padding:8px 10px;font-size:13px;line-height:1.6;color:var(--deep)}.calc.bad{background:#FBE9DF;color:#B4532A}.prow.col .pf{justify-content:flex-end}
+.ptop{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--sub)}.ptop b{color:var(--deep);font-variant-numeric:tabular-nums}
+.prow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #EEF2F5}
+.pn{min-width:0}.pn b{display:block;font-size:15px}.pn small{color:var(--sub);font-size:12.5px;line-height:1.55}
+.pf{display:flex;gap:6px;flex:none}.pf label{display:flex;flex-direction:column;align-items:center;font-size:11.5px;color:var(--sub);gap:2px}
+.pin{height:40px;border:1px solid var(--line);border-radius:10px;text-align:right;padding:0 8px;font:inherit;font-size:16px;font-variant-numeric:tabular-nums;background:#fff}
+.brow,.task{border-top:1px solid #EEF2F5;padding:10px 0;display:flex;flex-direction:column;gap:5px}
+.brow small,.task small{color:var(--sub);font-size:12.5px;line-height:1.55}
+.bt{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.bt b{font-size:15px}.bt .tag{flex:none}
+.bn{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;font-size:13px;color:var(--sub);font-variant-numeric:tabular-nums}.bn b{color:var(--ink,#1B2A3A)}.bn .chip{margin-left:auto}
+.oc{color:#B4532A}.kv.warn span{color:#B4532A}
+.task.done b{color:var(--sub);text-decoration:line-through;font-weight:500}
+.res{background:#F4F7FA;border-radius:10px;padding:8px 10px;font-size:13.5px;line-height:1.55;white-space:pre-wrap}
+textarea{width:100%;border:1px solid var(--line);border-radius:12px;padding:10px;font:inherit;font-size:16px;resize:vertical}
 </style>
 </head>
 <body>
@@ -192,7 +210,7 @@ function initForms(){
   S.F = {
     sale: { cat: '正裝', channel: '店內', account: '店內現金', cart: [], picks: [], coupons: 0, bc: [], brand: '', bp: '', date: t, note: '' },
     course: { course: (S.B.courses[0] || {}).name || '', people: 1, classDate: '', amount: '', account: '公司營運戶', party: '', date: t, note: '' },
-    expense: { scope: '店務', category: '運費', amount: '', account: '公司營運戶', party: '', date: t, note: '' },
+    expense: { scope: '店務', category: '運費', amount: '', account: '公司營運戶', party: '', batch: '', bom: '', date: t, note: '' },
     collab: { kind: '創業顧問', eventDate: '', people: '', per: '', party: '', amount: '', account: '公司營運戶', date: t, note: '' },
     consign: { brand: (S.B.brands[0] || {}).name || '', price: '', account: '店內現金', date: t, note: '' },
     send: { store: (S.B.stores[0] || {}).name || '', q: {}, date: t, note: '' },
@@ -328,6 +346,7 @@ function renderAdd(){
   if (S.page === 'routine') return W(routinePage());
   if (S.page === 'month') return W(monthPage());
   if (S.page === 'adv') return W(advPage());
+  if (S.page === 'prod') return W(prodPage());
   return role() === 'essen' ? essenHome() : esmeHome();
 }
 function saveLabel(){
@@ -419,6 +438,8 @@ const FORMS = {
       ${ship ? '<div class="hint">這裡記「寄出去」的運費。廠商寄貨給我們的運費，記在「店裡其他開銷 › 收貨運費」。</div>' : ''}
       ${only && S.gcats.length < 2 ? '' : groups.filter((g) => g[1].length).map(([g, names]) => `<div>${only ? '' : `<p class="lab">${g}</p>`}<div class="chips">${names.map((n) => chip(f.category === n, 'set', 'expense.category|' + n, esc(n))).join('')}</div></div>`).join('')}
       ${f.category === '收貨運費' ? '<div class="hint">廠商、淘寶寄貨給我們時付的運費記在這裡，對象填哪家廠商。</div>' : ''}
+      ${f.scope === '店務' && !isTax && FIXED_BILLS.indexOf(f.category) < 0 && (S.B.bomNames || []).length ? `<div><p class="lab">這是第二批生產的採購嗎？</p><div class="grid g2">${chip(!f.batch, 'set', 'expense.batch|', '不是', 'sq')}${chip(!!f.batch, 'set', 'expense.batch|第二批', '是，第二批', 'sq')}</div>
+        ${f.batch ? `<p class="lab" style="margin-top:8px">對應哪一項物料（不確定可以不選）</p><div class="chips">${S.B.bomNames.map((n) => chip(f.bom === n, 'set', 'expense.bom|' + n, esc(n))).join('')}</div><div class="hint" style="margin-top:8px">第二批的採購先算庫存，不算這個月的費用；做完算出每件成本後，賣出時才扣。</div>` : ''}</div>` : ''}
       ${field('expense.amount', '金額（照收據填）', inp('expense.amount', 'number', f.amount, 'big', '0'))}
       <div><p class="lab">用哪個帳戶付</p><div class="chips">${accs.map((a) => chip(f.account === a.name, 'set', 'expense.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>
       ${warn ? `<div class="hint">${warn}</div>` : ''}
@@ -670,7 +691,7 @@ const bigBtn = (d) => d === 'in'
 function essenHome(){
   if (S.issuesMonth !== curMonth()) loadIssues();
   const goods = ACTIONS.filter((a) => a.sec === 'goods').map((a) => chip(S.action === a.id && !S.ctx, 'act', a.id, a.label, 'sq')).join('');
-  const pend = S.B.pending.length, loaded = S.issuesMonth === curMonth();
+  const pend = S.B.pending.length + (S.B.tasks || []).filter((x) => x.area === '對帳' && x.status !== '完成').length, loaded = S.issuesMonth === curMonth();
   const iss = loaded ? (S.issues || []).filter((x) => !x.done).length : 0;
   const R = S.B.routine || [], rd = R.filter((x) => x.done).length;
   return `<div class="sec">
@@ -678,12 +699,14 @@ function essenHome(){
     ${S.action && !S.ctx ? formCard() : ''}
     <div><p class="lab">記帳（跟 Esme 同一套）</p><div class="grid g2"><button type="button" class="tile" data-a="pg" data-v="in"><b>＋ 收到錢</b><span>賣東西、課程、合作、撥款</span></button><button type="button" class="tile" data-a="pg" data-v="out"><b>－ 付錢出去</b><span>帳單、進貨、運費、繳稅</span></button></div></div>
     <div><p class="lab">管理</p><div class="mg">
-      <button type="button" class="mt" data-a="pg" data-v="week">${pend + iss ? `<span class="badge">${pend + iss}</span>` : loaded ? '<span class="badge g">✓</span>' : ''}<b>每週對帳</b><small>待確認 ${pend} 筆・需要處理 ${loaded ? iss + ' 項' : '…'}</small></button>
+      <button type="button" class="mt" data-a="pg" data-v="week">${pend + iss ? `<span class="badge">${pend + iss}</span>` : loaded ? '<span class="badge g">✓</span>' : ''}<b>每週對帳</b><small>待確認・追查 ${pend} 筆・需要處理 ${loaded ? iss + ' 項' : '…'}</small></button>
       <button type="button" class="mt" data-a="pg" data-v="routine"><span class="badge b">${rd}/${R.length}</span><b>本月例行</b><small>帳單、寄售對帳、繳稅、往來結算</small></button>
       <button type="button" class="mt" data-a="pg" data-v="month"><b>月底結算</b><small>往來結算、付品牌貨款、營業稅、撥存</small></button>
       <button type="button" class="mt" data-a="pg" data-v="adv"><b>進階記帳</b><small>錢進帳、其他轉帳、完整表單，修帳用</small></button>
+      <button type="button" class="mt wide" data-a="pg" data-v="prod">${prodOpen() ? `<span class="badge">${prodOpen()}</span>` : ''}<b>第二批生產</b><small>生產數量、物料清單、每件成本、核對追查、採購紀錄</small></button>
     </div></div></div>`;
 }
+const prodOpen = () => (S.B.tasks || []).filter((x) => x.area === '生產' && x.status !== '完成').length;
 let issuesLoading = false;
 async function loadIssues(){
   if (issuesLoading) return; issuesLoading = true;
@@ -759,7 +782,7 @@ function weekPage(){
   const iss = S.issuesMonth === curMonth() ? issuesCard() || '<p class="lab" style="margin:0">本月沒有需要處理的項目。</p>' : '<p class="lab" style="margin:0">檢查中…</p>';
   return `<div class="card">${back('')}<h3>每週對帳</h3>
     <p class="sect">待確認（「不確定記在哪裡」記的）</p>${P.length ? P.map(card).join('') : '<p class="lab" style="margin:0">目前沒有待確認的紀錄。</p>'}
-    <p class="sect">需要處理（系統自動檢查 ${curMonth().replace('-', '/')}）</p></div>${iss}`;
+    <p class="sect">需要處理（系統自動檢查 ${curMonth().replace('-', '/')}）</p></div>${iss}${tasksBlock('對帳')}`;
 }
 function clsPicker(p){
   const opts = p.dir === 'in' ? CLS_IN : CLS_OUT, c = S.cls;
@@ -855,6 +878,205 @@ function advPage(){
     <div class="chips">${FULL.map(([id, l]) => chip(S.anchor === id, 'aopen', id, l, 'sq')).join('')}</div></div>${fullOn && S.action ? formCard() : ''}`;
 }
 
+/* ───────── Essen：第二批生產 ───────── */
+const BOM_USES = ['每瓶正裝', '每組針管', '每支針管', '整批'];
+const BOM_USE_TIP = { '每瓶正裝': '每一瓶正裝要', '每組針管': '每一組針管要', '每支針管': '每一支針管要', '整批': '整批一次，單價填總價' };
+const BOM_STATUS = ['要確認', '要叫', '已下單', '已到貨', '不用叫'];
+const BOM_TAG = { '要確認': 'w', '要叫': 'w', '已下單': 'b', '已到貨': 'g', '不用叫': '' };
+let pLoading = false;
+async function loadProd(){
+  if (pLoading) return; pLoading = true;
+  try { const d = await api({ action: 'prod' }); S.P = d; S.B.tasks = d.tasks; } catch(e){ toast(e.message); }
+  pLoading = false; render();
+  if (S.jump) { const el = document.getElementById(S.jump); S.jump = ''; if (el) el.scrollIntoView({ block: 'center' }); }
+}
+const fmt = (n) => Math.round(+n || 0).toLocaleString('en-US');
+const fmtL = (ml) => (Math.round(ml / 100) / 10).toLocaleString('en-US', { minimumFractionDigits: 1 }) + ' L';
+// 計算方式：每款總公升數 − 正裝用掉的 = 剩下的液體裝針管；一組針管＝同系列每款各 N 支
+function prodCalc(){
+  const P = S.P, pa = P.params, q = P.qty, it = P.items, Q = (k) => q[k] || 0;
+  const ml = pa['正裝容量（ml）'] || 50, vml = pa['針管容量（ml）'] || 2, kPer = pa['針管組每款支數'] || 1;
+  const loss = Math.min(0.9, pa['損耗率'] || 0), extra = pa['物料多叫比例'] || 0;
+  const perf = it.filter((x) => x.cat === '正裝'), sets = it.filter((x) => x.cat === '針管組');
+  const scent = perf.map((x) => { const total = Q('liters:' + x.id) * 1000, sell = Q('sell:' + x.id), used = sell * ml, remain = total - used;
+    return { x, total, sell, used, remain, vials: remain > 0 ? Math.floor(remain / vml) : 0 }; });
+  const series = sets.map((k) => { const mem = scent.filter((s) => s.x.series === k.series);
+    const n = mem.length ? Math.min(...mem.map((s) => Math.floor(s.vials / kPer))) : 0;
+    const lim = mem.filter((s) => Math.floor(s.vials / kPer) === n && mem.length > 1).map((s) => s.x.name);
+    return { k, mem, sets: n, vps: mem.length * kPer, lim, left: mem.map((s) => ({ name: s.x.name, n: s.vials - n * kPer })) }; });
+  const bottles = scent.reduce((t, s) => t + s.sell, 0), totalMl = scent.reduce((t, s) => t + s.total, 0);
+  const nSets = series.reduce((t, s) => t + s.sets, 0), vials = series.reduce((t, s) => t + s.sets * s.vps, 0);
+  const units = { '每瓶正裝': bottles, '每組針管': nSets, '每支針管': vials, '整批': 1 };
+  // 分款的物料（貼紙、卡片…）：每款各自算需要、現有、要叫
+  const setsOf = (s) => (series.find((g) => g.k.series === s.x.series) || { sets: 0 }).sets;
+  const variants = (b) => b.split === '款式' ? scent.map((s) => ({ id: s.x.id, name: s.x.name, u: b.use === '每瓶正裝' ? s.sell : b.use === '每支針管' ? setsOf(s) * kPer : b.use === '每組針管' ? setsOf(s) : 0 }))
+    : b.split === '系列' ? series.map((g) => ({ id: g.k.id, name: g.k.name.replace('針管組', ''), u: b.use === '每組針管' ? g.sets : b.use === '每支針管' ? g.sets * g.vps : g.mem.reduce((t, s) => t + s.sell, 0) })) : null;
+  const rows = P.bom.map((b) => {
+    const off = b.status === '不用叫', whole = b.use === '整批';
+    const vs = !whole && b.split ? variants(b).map((v) => { const need = Math.ceil(b.per * v.u * (1 + extra)), have = num((b.hv || {})[v.id]); return Object.assign(v, { need, have, order: Math.max(0, need - have) }); }) : null;
+    const need = whole ? 1 : vs ? vs.reduce((t, v) => t + v.need, 0) : Math.ceil(b.per * (units[b.use] || 0) * (1 + extra));
+    const have = vs ? vs.reduce((t, v) => t + v.have, 0) : b.have;
+    const order = off || whole ? 0 : vs ? vs.reduce((t, v) => t + v.order, 0) : Math.max(0, need - b.have);
+    const budget = off ? 0 : whole ? b.price : order * b.price;
+    const spent = P.purchases.filter((p) => p.bom === b.name).reduce((t, p) => t + p.amount, 0);
+    return Object.assign({}, b, { need, have, order, budget, spent, off, whole, vs });
+  });
+  const sum = (use) => rows.filter((r) => r.use === use && !r.off).reduce((t, r) => t + r.price * r.per, 0);
+  const batchTotal = rows.filter((r) => r.whole && !r.off).reduce((t, r) => t + r.price, 0);
+  const perMl = totalMl ? batchTotal / totalMl : 0, keep = 1 - loss;
+  const vps = series.length ? series[0].vps : 3;
+  const cPerf = (perMl * ml + sum('每瓶正裝')) / keep;
+  const cSet = (perMl * vml * vps + sum('每支針管') * vps + sum('每組針管')) / keep;
+  const cSingle = (perMl * vml + sum('每支針管')) / keep;   // 店內自己分裝的單支：一支的液體＋空針管
+  return { ml, vml, kPer, loss, extra, scent, series, bottles, totalMl, nSets, vials, rows, batchTotal, perMl, vps, cPerf, cSet, cSingle,
+    missing: rows.filter((r) => !r.off && !r.price), budget: rows.reduce((t, r) => t + r.budget, 0), spentAll: P.purchases.reduce((t, p) => t + p.amount, 0) };
+}
+const pIn = (attr, key, val, w) => `<input type="number" inputmode="decimal" step="any" class="pin" style="width:${w || 74}px" data-${attr}="${esc(key)}" value="${val === undefined || val === 0 && attr === 'pq' && key.indexOf('liters') === 0 ? '' : val}" placeholder="0">`;
+
+function prodPage(){
+  if (!S.P) { loadProd(); return `<div class="card">${back('')}<h3>第二批生產</h3><p class="lab">載入中…</p></div>`; }
+  const C = prodCalc(), t = S.ptab || 'qty';
+  const open = (S.B.tasks || []).filter((x) => x.area === '生產' && x.status !== '完成').length;
+  const tabs = [['qty', '數量'], ['bom', '物料'], ['cost', '成本'], ['trk', '追查' + (open ? ' ' + open : '')], ['buy', '付款']];
+  const body = { qty: prodQty, bom: prodBom, cost: prodCost, trk: () => tasksBlock('生產'), buy: prodBuy }[t](C);
+  return `<div class="card">${back('')}<h3>第二批生產</h3>
+    <div class="ptop"><span>正裝 <b>${fmt(C.bottles)}</b> 瓶</span><span>針管組 <b>${fmt(C.nSets)}</b> 組</span><span>預算 <b>$${fmt(C.budget)}</b></span><span>已花 <b>$${fmt(C.spentAll)}</b></span></div>
+    <div class="ptabs">${tabs.map(([k, l]) => chip(t === k, 'ptab', k, l, 'sq')).join('')}</div></div>${body}`;
+}
+
+function prodQty(C){
+  const P = S.P, q = P.qty, v = P.vel, mon = P.lastRec ? Number(P.lastRec.slice(5)) + ' 月' : '';
+  const vel = (id) => { const w = v[id] || { direct: 0, consign: 0 }; return `參考月銷約 ${w.direct + w.consign}（近 30 天店內＋官網 ${w.direct}、${mon}寄售 ${w.consign}）`; };
+  const scent = C.scent.map((s) => `<div class="prow col"><div class="pn"><b>${esc(s.x.name)}</b><small>${vel(s.x.id)}</small></div>
+      <div class="pf"><label>總公升數（L）${pIn('pq', 'liters:' + s.x.id, q['liters:' + s.x.id])}</label><label>正裝瓶數${pIn('pq', 'sell:' + s.x.id, q['sell:' + s.x.id])}</label></div>
+      ${s.total ? `<div class="calc ${s.remain < 0 ? 'bad' : ''}">${s.remain < 0 ? `正裝要用 ${fmtL(s.used)}，比總量多 ${fmtL(-s.remain)}：減少瓶數或增加公升數` : `正裝用 ${fmtL(s.used)}，剩 ${fmtL(s.remain)} → 可裝 <b>${fmt(s.vials)}</b> 支針管`}</div>` : '<div class="calc">填總公升數後，會算出剩下的液體可以裝幾支針管</div>'}</div>`).join('');
+  const series = C.series.map((g) => `<div class="prow col"><div class="pn"><b>${esc(g.k.name)}</b><small>${vel(g.k.id)}</small></div>
+      <div class="calc"><span>可以裝 <b>${fmt(g.sets)}</b> 組（一組 ${g.mem.map((s) => esc(s.x.name)).join('、')} 各 ${C.kPer} 支）</span>
+      ${g.sets && g.lim.length && g.lim.length < g.mem.length ? `<br>組數卡在${g.lim.join('、')}；` : g.sets ? '<br>' : ''}${g.sets ? '裝完剩：' + g.left.map((x) => x.name + ' ' + x.n + ' 支').join('、') : ''}</div></div>`).join('');
+  return `<div class="card"><h3 style="margin:0">每款要做多少</h3>
+      <p class="lab" style="margin:0">工廠直接做成可以賣的成品。每款填「總公升數」和「正裝瓶數」，扣掉正裝用的量，剩下的裝成同系列的針管組。改完點別處就會存。</p>${scent}
+      <div class="kv b"><span>合計</span><span>${fmtL(C.totalMl)}・正裝 ${fmt(C.bottles)} 瓶</span></div></div>
+    <div class="card"><h3 style="margin:0">針管組（自動算）</h3><p class="lab" style="margin:0">正裝一瓶 ${C.ml} ml、針管一支 ${C.vml} ml，可以在「成本」頁改。</p>${series}
+      <div class="kv b"><span>合計</span><span>${fmt(C.nSets)} 組・${fmt(C.vials)} 支</span></div></div>`;
+}
+
+const payNew = (b) => b.status === '已下單' && b.prev !== '已下單';
+const BOM_CARDS = [['共用', '整批的費用，照容量分攤到正裝和針管組', ['整批'], '整批'], ['正裝', '每一瓶正裝要的東西', ['每瓶正裝', '販售正裝'], '每瓶正裝'], ['針管組', '每一組或每一支針管要的東西', ['每組針管', '每支針管'], '每組針管']];
+// 物料對應的支出分類（付款時自動帶入）
+const bomCat = (b) => /原料|香材|酒精|溶劑/.test(b.name) ? '原料香材' : /代工|加工/.test(b.name) ? '外包加工' : /運費|集運|關稅/.test(b.name) ? '收貨運費' : '瓶器包材';
+function prodBom(C){
+  const ed = S.bomEdit;
+  const qtyLine = (r) => r.whole ? `<span>整批總價 <b>${r.price ? '$' + fmt(r.price) : '未填'}</b></span>`
+    : `<span>需要 <b>${fmt(r.need)}</b></span><span>現有 <b>${fmt(r.have)}</b></span>${r.off ? '' : r.status === '已下單' ? `<span>已叫 <b>${fmt(r.order)}</b>，等到貨</span>` : r.status === '已到貨' ? `<span>已到 <b>${fmt(r.order)}</b></span>` : `<span>要叫 <b class="${r.order ? 'oc' : ''}">${fmt(r.order)}</b></span>`}<span>單價 <b>${r.price ? '$' + r.price : '未填'}</b></span>`;
+  const row = (r) => ed === r.row ? `<div id="bom-${r.row}">${bomEditor()}</div>` : `<div class="brow ${r.off ? 'dim2' : ''}" id="bom-${r.row}">
+      <div class="bt"><b>${esc(r.name)}</b><span class="tag ${BOM_TAG[r.status] || ''}">${r.status === '已到貨' ? '✓ ' : ''}${r.status}</span></div>
+      <small>${r.use}${r.whole ? '' : ' × ' + r.per}${r.vendor ? '・' + esc(r.vendor) : ''}${r.moq ? '・最低 ' + esc(r.moq) : ''}${r.note ? '<br>' + esc(r.note) : ''}</small>
+      <div class="bn">${qtyLine(r)}</div>
+      ${r.vs ? `<div class="vtab"><span class="h">${r.split === '款式' ? '款式' : '系列'}</span><span class="h">需要</span><span class="h">現有</span><span class="h">${r.status === '已下單' ? '已叫' : r.status === '已到貨' ? '已到' : '要叫'}</span>${r.vs.map((v) => `<span>${esc(v.name)}</span><span>${fmt(v.need)}</span><span>${fmt(v.have)}</span><span class="${v.order && !r.off && r.status !== '已下單' && r.status !== '已到貨' ? 'oc' : ''}">${fmt(v.order)}</span>`).join('')}</div>` : ''}
+      <div class="bn"><span>預算 <b>$${fmt(r.budget)}</b></span>${r.spent ? `<span>已付 <b>$${fmt(r.spent)}</b></span>` : ''}
+        <span class="bbtn">${(r.status === '已下單' || r.status === '已到貨') && !(S.pay && S.pay.name === r.name) ? `<button type="button" class="chip sq" data-a="payOpen" data-v="${esc(r.name)}">記付款</button>` : ''}<button type="button" class="chip sq" data-a="bomEdit" data-v="${r.row}">編輯</button></span></div>
+      ${S.pay && S.pay.name === r.name ? payPanel(r) : ''}</div>`;
+  const cnt = (st) => C.rows.filter((r) => r.status === st).length, todo = C.rows.filter((r) => r.status === '要確認' || r.status === '要叫').length;
+  const card = ([t, tip, uses, def]) => { const rs = C.rows.filter((r) => uses.indexOf(r.use) > -1); const sub = rs.reduce((x, r) => x + r.budget, 0);
+    return `<div class="card"><div class="bt"><h3 style="margin:0">${t}</h3><span style="font-size:13px;color:var(--sub)">預算 <b style="color:var(--deep)">$${fmt(sub)}</b></span></div><p class="lab" style="margin:0">${tip}</p>
+      ${rs.map(row).join('') || '<p class="lab" style="margin:0">沒有項目。</p>'}
+      ${ed === 'new:' + def ? bomEditor() : `<button type="button" class="ghost" data-a="bomEdit" data-v="new:${def}">＋ 新增${t}物料</button>`}</div>`; };
+  return `<div class="card"><h3 style="margin:0">物料清單</h3>
+    <div class="bprog"><span class="tag w">還沒處理 ${todo}</span><span class="tag b">已下單 ${cnt('已下單')}</span><span class="tag g">✓ 已到貨 ${cnt('已到貨')}</span><span class="tag">不用叫 ${cnt('不用叫')}</span></div>
+    <p class="lab" style="margin:0">需要＝每件用量 × 件數 × ${1 + C.extra}（多叫 ${Math.round(C.extra * 100)}%），要叫＝需要 − 現有。件數照「數量」頁：正裝 ${fmt(C.bottles)} 瓶、針管 ${fmt(C.nSets)} 組 ${fmt(C.vials)} 支。工廠有包的項目，狀態改「不用叫」。狀態改成「已下單」時，可以直接記付款。</p>
+    <div class="kv b"><span>物料預算合計</span><span>$${fmt(C.budget)}</span></div></div>
+    ${BOM_CARDS.map(card).join('')}`;
+}
+function payPanel(r){
+  const f = S.pay;
+  return `<div class="card fc" style="gap:10px"><b>記付款：${esc(r.name)}</b>
+    <small style="color:var(--sub)">會記成「支出 › ${f.category}」並標記第二批，先算庫存、不算當月費用。訂金、尾款分開付就分開記。</small>
+    ${field('pay.amount', '這次付多少', inp('pay.amount', 'number', f.amount, 'big', '0'))}
+    <div><p class="lab">用哪個帳戶付</p><div class="chips">${payAccs().map((a) => chip(f.account === a.name, 'set', 'pay.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>
+    ${accScope(f.account) === '個人' ? '<div class="hint">用個人的錢付，會自動記成「代墊」，之後店再還。</div>' : ''}
+    <div class="grid g2">${field('pay.date', '付款日期', `<input id="pay.date" data-in="pay.date" type="date" value="${esc(f.date)}">`)}${field('pay.note', '備註（選填）', inp('pay.note', 'text', f.note, '', '例：訂金 50%'))}</div>
+    <div class="grid g2"><button type="button" class="ghost" data-a="payCancel">先不記</button><button type="button" class="save" style="margin:0" data-a="paySave" ${S.busy ? 'disabled' : ''}>記下付款</button></div></div>`;
+}
+function bomEditor(){
+  const b = S.bd;
+  return `<div class="card fc" style="gap:10px">
+    ${field('bd.name', '物料名稱', inp('bd.name', 'text', b.name))}
+    ${String(S.bomEdit).indexOf('new') === 0 ? `<div><p class="lab">用在</p><div class="chips">${BOM_USES.map((u) => chip(b.use === u, 'set', 'bd.use|' + u, u, 'sq')).join('')}</div><small style="color:var(--sub)">${BOM_USE_TIP[b.use] || ''}</small></div>` : `<p class="lab" style="margin:0">用在：<b style="color:var(--deep)">${b.use}</b>${b.split ? (b.split === '款式' ? '・六款各自' : '・兩個系列各自') : ''}</p>`}
+    ${b.use === '整批' || String(S.bomEdit).indexOf('new') !== 0 ? '' : `<div><p class="lab">每款的設計不一樣嗎？</p><div class="chips">${chip(!b.split, 'set', 'bd.split|', '全部一樣', 'sq')}${chip(b.split === '款式', 'set', 'bd.split|款式', '六款各自不同', 'sq')}${chip(b.split === '系列', 'set', 'bd.split|系列', '兩個系列不同', 'sq')}</div><small style="color:var(--sub)">選「各自不同」，需要量和現有數量會分開算（例：貼紙每款印的不一樣）。</small></div>`}
+    ${b.use !== '整批' && b.split ? `<div><p class="lab">現有數量（${b.split === '款式' ? '六款' : '兩個系列'}分開填）</p><div class="grid g2">${(b.split === '款式' ? S.P.items.filter((x) => x.cat === '正裝') : S.P.items.filter((x) => x.cat === '針管組')).map((x) => field('bd.h_' + x.id, esc(b.split === '款式' ? x.name : x.name.replace('針管組', '')), inp('bd.h_' + x.id, 'number', (b.hv || {})[x.id] || '', '', '0'))).join('')}</div></div>` : ''}
+    <div class="grid g2">${b.use === '整批' ? '' : field('bd.per', '每件用量', inp('bd.per', 'number', b.per))}${b.use === '整批' || b.split ? '' : field('bd.have', '現有數量', inp('bd.have', 'number', b.have))}${field('bd.price', b.use === '整批' ? '整批總價（含運）' : '單價（含運）', inp('bd.price', 'number', b.price))}${field('bd.moq', '最低訂購量', inp('bd.moq', 'text', b.moq))}</div>
+    ${field('bd.vendor', '廠商', inp('bd.vendor', 'text', b.vendor))}
+    <div><p class="lab">狀態</p><div class="chips">${BOM_STATUS.map((s) => chip(b.status === s, 'set', 'bd.status|' + s, s, 'sq')).join('')}</div></div>
+    ${field('bd.note', '備註', inp('bd.note', 'text', b.note))}
+    ${payNew(b) ? `<div class="paybox"><p class="lab" style="margin:0"><b style="color:var(--deep)">下單時要一起記付款嗎？</b></p>
+      <div class="grid g2">${chip(b.payNow !== false, 'set', 'bd.payNow|1', '現在記', 'sq')}${chip(b.payNow === false, 'set', 'bd.payNow|0', '之後再記', 'sq')}</div>
+      ${b.payNow !== false ? `${field('bd.pamt', '這次付多少（留空＝照預算）', inp('bd.pamt', 'number', b.pamt, '', '照預算'))}
+        <div><p class="lab">用哪個帳戶付</p><div class="chips">${payAccs().map((a) => chip(b.pacc === a.name, 'set', 'bd.pacc|' + a.name, esc(a.name), 'sq')).join('')}</div></div>
+        ${accScope(b.pacc) === '個人' ? '<div class="hint">用個人的錢付，會自動記成「代墊」，之後店再還。</div>' : ''}
+        <div class="grid g2">${field('bd.pdate', '付款日期', `<input id="bd.pdate" data-in="bd.pdate" type="date" value="${esc(b.pdate)}">`)}${field('bd.pnote', '付款備註（選填）', inp('bd.pnote', 'text', b.pnote, '', '例：訂金 50%'))}</div>
+        <small style="color:var(--sub)">記成「支出 › ${bomCat(b)}」並標記第二批，先算庫存、不算當月費用。</small>` : ''}</div>` : ''}
+    <div class="grid g2"><button type="button" class="ghost" data-a="bomCancel">取消</button><button type="button" class="save" style="margin:0" data-a="bomSave" ${S.busy ? 'disabled' : ''}>${payNew(b) && b.payNow !== false ? '儲存並記付款' : '儲存'}</button></div>
+    ${String(S.bomEdit).indexOf('new') !== 0 ? '<button type="button" class="ghost" style="color:var(--warn)" data-a="bomDel">刪除這項物料</button>' : ''}</div>`;
+}
+
+function prodCost(C){
+  const pa = S.P.params, it = S.P.items;
+  const par = (k, tip) => `<div class="prow"><div class="pn"><b>${k}</b><small>${tip}</small></div><div class="pf">${pIn('pp', k, pa[k])}</div></div>`;
+  const price = (cat) => (it.find((x) => x.cat === cat) || {}).price || 0;
+  const tax = (p) => p / 21;
+  const mg = (p, c) => [['店內、官網', p - tax(p) - c], ['模範、如寄（分 60%）', p * 0.6 - tax(p) - c], ['ASA 過門檻（分 50%）', p * 0.5 - tax(p) - c]];
+  const cur = (cat) => (it.find((x) => x.cat === cat) || {}).cost;
+  const unit = (l, c, cat) => `<div class="kv b"><span>${l}</span><span>$${fmt(c)}</span></div>
+    ${price(cat) ? mg(price(cat), c).map(([k, v]) => `<div class="kv s"><span>${k}賣 ${fmt(price(cat))}，一件賺</span><span class="${v < 0 ? 'oc' : ''}">$${fmt(v)}</span></div>`).join('') : ''}
+    ${cur(cat) ? `<div class="kv s"><span>品項表目前填的成本</span><span>$${fmt(cur(cat))}</span></div>` : ''}`;
+  return `<div class="card"><h3 style="margin:0">參數</h3><p class="lab" style="margin:0">改完點別處就會存。</p>
+      ${par('正裝容量（ml）', '一瓶正裝幾毫升')}${par('針管容量（ml）', '一支針管幾毫升')}${par('針管組每款支數', '一組針管裡，同系列每款各幾支')}
+      ${par('損耗率', '破瓶、瑕疵、不能賣的比例，0.06＝6%')}${par('物料多叫比例', '0.05＝多叫 5%')}</div>
+    <div class="card"><h3 style="margin:0">每件成本試算</h3>
+      ${C.missing.length ? `<div class="hint"><b>還沒填單價：</b>${C.missing.map((r) => esc(r.name)).join('、')}。這些沒填，成本會偏低；工廠有包的改「不用叫」。</div>` : ''}
+      <div class="kv s"><span>整批費用 $${fmt(C.batchTotal)} ÷ ${fmtL(C.totalMl)}</span><span>每 ml $${(C.perMl).toFixed(2)}</span></div>
+      ${unit('正裝一瓶', C.cPerf, '正裝')}
+      ${unit('針管一組（' + C.vps + ' 支＋外盒）', C.cSet, '針管組')}
+      <small style="color:var(--sub);line-height:1.6">整批費用（原料、酒精、代工費、運費）照容量分攤到正裝和針管。已扣 5% 營業稅，寄售照分潤比例，成本已含損耗 ${Math.round(C.loss * 100)}%。</small>
+      <button type="button" class="save" data-a="writeCost" ${S.busy || !C.cPerf ? 'disabled' : ''}>把成本寫進品項表</button>
+      <small style="color:var(--sub);line-height:1.6">寫進去之後，每賣出一件，月報會自動扣「已售商品成本」，送出的贈品記「贈品・公關品成本」。第一批剩下的庫存也用這個成本。店裡自己分裝的單支針管，會一起寫入一支 ${C.vml} ml 的成本 $${fmt(C.cSingle)}。</small></div>
+    <div class="card"><h3 style="margin:0">資金</h3>
+      <div class="kv"><span>物料預算合計</span><span>$${fmt(C.budget)}</span></div>
+      <div class="kv"><span>已經記的第二批採購</span><span>$${fmt(C.spentAll)}</span></div>
+      <div class="kv b"><span>還要準備</span><span>$${fmt(Math.max(0, C.budget - C.spentAll))}</span></div>
+      <small style="color:var(--sub);line-height:1.6">寄售款通常隔月才收到，工廠交貨前錢就要先付。付款時間記在「追查」。</small></div>`;
+}
+
+function prodBuy(C){
+  const P = S.P, names = {}; P.bom.forEach((b) => { names[b.name] = (BOM_CARDS.find((c) => c[2].indexOf(b.use) > -1) || ['共用'])[0]; });
+  const grp = ['共用', '正裝', '針管組', '沒選物料'].map((g) => { const ps = P.purchases.filter((p) => (names[p.bom] || '沒選物料') === g); if (!ps.length) return '';
+    return `<p class="sect">${g}　$${fmt(ps.reduce((t, p) => t + p.amount, 0))}</p>` + ps.map((p) => `<div class="kv"><span>${md(p.date)}・${esc(p.bom || p.category)}<br><small style="color:var(--sub)">${esc(p.user)}・${esc(p.from)}${p.party ? '・' + esc(p.party) : ''}${p.note ? '・' + esc(p.note) : ''}</small></span><span>$${fmt(p.amount)}</span></div>`).join(''); }).join('');
+  return `<div class="card"><h3 style="margin:0">第二批付款紀錄</h3>
+    <p class="lab" style="margin:0">Essen：在「物料」把狀態改成已下單時記付款，或按那一項的「記付款」（訂金、尾款可以分開記）。<br>Esme：用「付錢出去 › 買原料、瓶子、包材」記，選「是，第二批」。<br>這些都先算庫存，不算當月費用。</p>
+    ${grp || '<p class="lab" style="margin:0">還沒有紀錄。</p>'}
+    <div class="kv b"><span>合計</span><span>$${fmt(C.spentAll)}</span></div></div>`;
+}
+
+// 核對追查（生產、對帳共用）
+function tasksBlock(area){
+  const L = (S.B.tasks || []).filter((x) => x.area === area);
+  const sorted = L.filter((x) => x.status !== '完成').concat(L.filter((x) => x.status === '完成'));
+  const one = (x) => { const ed = S.tEdit === x.id;
+    return `<div class="task ${x.status === '完成' ? 'done' : ''}"><div class="bt"><b>${esc(x.title)}</b><span class="tag ${x.status === '完成' ? '' : 'w'}">${x.status}</span></div>
+      ${x.desc ? `<small>${esc(x.desc)}</small>` : ''}
+      ${x.result && !ed ? `<div class="res">結果：${esc(x.result)}</div>` : ''}
+      ${ed ? `${field('tr.result', '結果或進度', `<textarea id="tr.result" data-in="tr.result" rows="3">${esc(S.tr.result || '')}</textarea>`)}
+        <div class="chips">${['未處理', '處理中', '完成'].map((s) => chip(S.tr.status === s, 'set', 'tr.status|' + s, s, 'sq')).join('')}</div>
+        <div class="grid g2"><button type="button" class="ghost" data-a="tCancel">取消</button><button type="button" class="save" style="margin:0" data-a="tSave" ${S.busy ? 'disabled' : ''}>儲存</button></div>`
+      : `<div class="bn">${x.by ? `<small>${esc(x.by)}・${esc(x.at)}</small>` : '<span></span>'}<button type="button" class="chip sq" data-a="tEdit" data-v="${esc(x.id)}">更新</button></div>`}</div>`; };
+  const add = S.tEdit === 'new:' + area ? `<div class="card fc" style="gap:10px">${field('tr.title', '項目', inp('tr.title', 'text', S.tr.title))}${field('tr.desc', '說明（選填）', inp('tr.desc', 'text', S.tr.desc))}
+      <div class="grid g2"><button type="button" class="ghost" data-a="tCancel">取消</button><button type="button" class="save" style="margin:0" data-a="tSave" ${S.busy ? 'disabled' : ''}>新增</button></div></div>`
+    : `<button type="button" class="ghost" data-a="tNew" data-v="${area}">＋ 新增${area === '生產' ? '核對項目' : '追查項目'}</button>`;
+  return `<div class="card"><h3 style="margin:0">${area === '生產' ? '核對追查' : '追查項目'}</h3>
+    <p class="lab" style="margin:0">${area === '生產' ? '開工前要確認的事。查到結果寫進去，完成就改成「完成」。' : '對帳時發現、要查原始資料才能改的帳。'}</p>
+    ${sorted.map(one).join('') || '<p class="lab" style="margin:0">沒有項目。</p>'}${add}</div>`;
+}
+
 /* ───────── 送出 ───────── */
 function payload(){
   const a = S.action, F = S.F;
@@ -868,7 +1090,7 @@ function payload(){
   if (a === 'gbrand') { const f = F.gbrand; return { action: 'transfer', date: f.date, note: f.note, category: '代售貨款支付', from: f.account, amount: f.amount, party: f.brand }; }
   if (a === 'course') { const f = F.course; const auto = coursePrice(S.B.courses.find((x) => x.name === f.course), f.people); return { action: 'course', date: f.date, note: f.note, course: f.course, people: f.people, classDate: f.classDate, amount: f.amount === '' ? auto : f.amount, account: f.account, party: f.party }; }
   if (a === 'expense' && F.expense.scope === '店務' && F.expense.category === '營業稅') { const f = F.expense; return { action: 'transfer', date: f.date, note: f.note, category: '營業稅繳納', from: f.account, to: '', amount: f.amount }; }
-  if (a === 'expense') { const f = F.expense; return { action: 'expense', date: f.date, note: f.note, category: f.category, amount: f.amount, account: f.account, party: f.party }; }
+  if (a === 'expense') { const f = F.expense; return { action: 'expense', date: f.date, note: f.note, category: f.category, amount: f.amount, account: f.account, party: f.party, batch: f.scope === '店務' ? f.batch : '', bom: f.batch ? f.bom : '' }; }
   if (a === 'collab') { const f = F.collab; return { action: 'collab', date: f.date, eventDate: f.eventDate, note: f.note, kind: f.kind, party: f.party, amount: f.kind === '報名抽成' ? num(f.people) * num(f.per) : f.amount, people: f.people, per: f.per, account: f.account }; }
   if (a === 'consign') { const f = F.consign; return { action: 'consign', date: f.date, note: f.note, brand: f.brand, price: f.price, account: f.account }; }
   if (a === 'send') { const f = F.send; return { action: 'send', date: f.date, note: f.note, store: f.store, lines: Object.keys(f.q).map((id) => ({ id, qty: f.q[id] })) }; }
@@ -913,6 +1135,7 @@ async function save(){
     const back = tx.date && tx.date < new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10) ? '（日期 ' + tx.date.slice(5).replace('-', '/') + '，明細在那天底下）' : '';
     toast(tx.action === 'pending' ? '已記下，Essen 對帳時會看到這筆' : ctx === 'cls' ? '已歸類' : (wasEdit ? '已修改' : '已記下' + (r.result.count > 1 ? ' ' + r.result.count + ' 筆' : '')) + back);
     const keep = S.action;
+    if (tx.batch || S.page === 'prod') S.P = null;
     if (ctx) { S.editing = null; S.action = ''; S.anchor = ''; S.cls = null; S.ctx = ''; if (ctx === 'g') { S.page = ''; window.scrollTo(0, 0); } S.issuesMonth = ''; }
     else if (wasEdit) { S.editing = null; S.action = ''; S.tab = 'list'; S.openEntry = ''; }
     await boot(true);
@@ -940,7 +1163,7 @@ function prefill(t){
     case '課程收款': Object.assign(F.course, base, { course: d.course, people: d.people || 1, classDate: d.classDate || '', amount: t.amount, account: t.to, party: t.party }); S.action = 'course'; break;
     case '品牌合作': Object.assign(F.collab, base, { kind: t.category, eventDate: d.eventDate || '', people: d.people || '', per: d.per || '', party: t.party, amount: t.amount, account: t.to }); S.action = 'collab'; break;
     case '代售': Object.assign(F.consign, base, { brand: t.party, price: t.amount, account: t.to }); S.action = 'consign'; break;
-    case '支出': Object.assign(F.expense, base, { scope: t.scope === '個人' ? '個人' : '店務', category: t.category, amount: t.amount, account: t.from, party: t.party }); S.action = 'expense'; break;
+    case '支出': Object.assign(F.expense, base, { scope: t.scope === '個人' ? '個人' : '店務', category: t.category, amount: t.amount, account: t.from, party: t.party, batch: (t.d || {}).batch || '', bom: (t.d || {}).bom || '' }); S.action = 'expense'; break;
     case '寄售送貨': Object.assign(F.send, base, { store: t.party, q: qOf(d.lines) }); S.action = 'send'; break;
     case '寄售對帳': {
       const key = d.group ? 'G:' + d.group : t.party;
@@ -973,7 +1196,7 @@ function entryText(t){
     case '課程收款': return { title: d.course, sub: d.people + ' 人・上課 ' + d.classDate + '・' + t.to, amt: '+' + money(t.amount), c: 'in-c' };
     case '品牌合作': return { title: '品牌合作・' + t.category + (t.party ? '・' + t.party : ''), sub: (d.eventDate ? '活動 ' + d.eventDate + '・' : '') + '收進 ' + t.to, amt: '+' + money(t.amount), c: 'in-c' };
     case '代售': return { title: t.party + ' 代售', sub: '店的收入 ' + money((d.shop || 0) + (d.tax || 0)) + '・應付品牌 ' + money(d.brand), amt: '+' + money(t.amount), c: 'in-c' };
-    case '支出': return { title: t.category, sub: (t.scope === '個人' ? '個人・' : '') + t.from + (t.party ? '・' + t.party : ''), amt: '−' + money(t.amount), c: 'out-c' };
+    case '支出': return { title: t.category + ((t.d || {}).batch ? '・第二批' : ''), sub: (t.scope === '個人' ? '個人・' : '') + t.from + (t.party ? '・' + t.party : '') + ((t.d || {}).bom ? '・' + t.d.bom : ''), amt: '−' + money(t.amount), c: 'out-c' };
     case '寄售送貨': return { title: '送貨到 ' + t.party, sub: lines(d.lines), amt: '庫存', c: '' };
     case '寄售對帳': return { title: t.party + ' 對帳（' + t.rec + '）', sub: d.group ? (d.lines || []).map((l) => l.store.replace(d.group, '').trim() + '・' + l.name + '×' + l.qty).join('、') : lines(d.lines), amt: money(t.amount), c: '' };
     case '寄售收款': return { title: t.party + ' 收款', sub: t.rec + ' 的款項・' + t.to, amt: '+' + money(t.amount), c: 'in-c' };
@@ -1060,6 +1283,7 @@ function renderReport(){
   const promos = s.promos.length ? s.promos.map((p) => `<div class="card" style="gap:4px"><div style="display:flex;justify-content:space-between"><b>活動：${esc(p.name)}</b></div>${p.sold ? `<div class="kv"><span>活動期間賣出正裝</span><span>${p.sold} 瓶</span></div>` : ''}${Object.keys(p.gifts).map((k) => `<div class="kv ind"><span>贈出 ${esc(k)}</span><span>${p.gifts[k]}</span></div>`).join('')}<div class="kv tot"><span>贈品價值（以售價計，參考）</span><span>${money(p.value)}${p.unpriced ? ' ＋未定價品項' : ''}</span></div></div>`).join('') : '';
   const pend = [];
   if (s.pending.receivable > 0) pend.push(kv('寄售應收未收', s.pending.receivable));
+  if (s.batchSpent > 0) pend.push(kv('第二批採購（先算庫存，不算本月費用）', s.batchSpent));
   if (s.pending.personalFromShop > 0) pend.push(kv('本月用店帳戶付的個人開銷', s.pending.personalFromShop));
   if (s.pending.missingRecon.length) pend.push(`<div class="kv"><span>本月還沒對帳</span><span>${esc(s.pending.missingRecon.join('、'))}</span></div>`);
   return `<div class="sec">${nav}${issuesCard()}
@@ -1177,6 +1401,9 @@ function setPath(path, val){
   if (form === 'm') { S.F.monthly.amounts[key] = val === '' ? '' : Number(val); return; }
   if (form === 'monthly') { S.F.monthly[key] = val; return; }
   if (form === 'cls') { S.cls[key] = val; return; }
+  if (form === 'bd') { if (key.indexOf('h_') === 0) { S.bd.hv = Object.assign({}, S.bd.hv || {}); S.bd.hv[key.slice(2)] = num(val); return; } S.bd[key] = key === 'payNow' ? val === '1' : val; return; }
+  if (form === 'tr') { S.tr[key] = val; return; }
+  if (form === 'pay') { S.pay[key] = val; return; }
   const f = S.F[form]; if (!f) return;
   if (['people'].indexOf(key) > -1) val = Number(val);
   if (form === 'sale' && key === 'cat') { f.cat = val; return; }
@@ -1195,7 +1422,7 @@ const bump = (obj, id, d) => { obj[id] = Math.max(0, (obj[id] || 0) + d); if (!o
 const H = {
   tab(v){ S.tab = v; if (v === 'list') S.items = null; if (v === 'report') S.summary = null; render(); },
   act(v){ if (S.editing && v !== S.action) { S.editing = null; initForms(); toast('已取消修改'); } if (S.ctx) { S.ctx = ''; S.anchor = ''; S.action = ''; initForms(); } S.action = S.action === v ? '' : v; if (MGROUP[v] && !S.F.monthly) initMonthly(); render(); },
-  pg(v){ if (S.ctx) { S.editing = null; S.ctx = ''; } S.page = v; S.action = ''; S.anchor = ''; S.cls = null; render(); window.scrollTo(0, 0); },
+  pg(v){ if (S.ctx) { S.editing = null; S.ctx = ''; } if (v === 'prod') { S.P = null; S.bomEdit = null; S.tEdit = null; } S.page = v; S.action = ''; S.anchor = ''; S.cls = null; render(); window.scrollTo(0, 0); },
   gstart(v){ gstart(v); render(); window.scrollTo(0, 0); },
   saleAddB(){ const f = S.F.sale; if (!f.brand) return toast('先選品牌'); if (!(num(f.bp) > 0)) return toast('請填售價'); f.bc.push({ brand: f.brand, price: Math.round(num(f.bp)) }); f.bp = ''; render(); },
   saleDelB(i){ S.F.sale.bc.splice(+i, 1); render(); },
@@ -1220,6 +1447,44 @@ const H = {
   mgo(v){ const c = S.B.close; goTask(v === 'owe' ? { go: 'owe' } : v === 'pay' ? { go: 'pay' } : { go: 'tax', amount: Math.max(0, c.vat.prevDue - c.vat.paidThisMonth) }, v); render(); },
   aopen(id){ if (S.anchor === id) { S.anchor = ''; S.action = ''; S.ctx = ''; render(); return; } initForms(); S.editing = null; S.ctx = 'pg'; S.gcats = null; S.anchor = id; S.action = id; if (MGROUP[id]) initMonthly(); render(); },
   async pause(){ const v = !S.B.paused; try { await api({ action: 'setPaused', paused: v }); await boot(true); toast(v ? '已暫停月初撥存' : '已開始月初撥存，本月例行會出現「月初撥存」'); } catch(e){ toast(e.message); } render(); },
+  ptab(v){ S.ptab = v; S.bomEdit = null; S.tEdit = null; if (S.anchor === 'buy') { S.anchor = ''; S.action = ''; S.ctx = ''; } render(); },
+  bomEdit(v){ const isNew = String(v).indexOf('new') === 0; const b = isNew ? { name: '', use: v.split(':')[1] || '每瓶正裝', per: 1, have: 0, price: 0, vendor: '', moq: '', status: '要確認', note: '', split: '', hv: {} } : S.P.bom.find((x) => String(x.row) === String(v)); if (!b) return; S.bomEdit = isNew ? v : +v; S.bd = Object.assign({}, b, { prev: b.status, payNow: true, pamt: '', pacc: S.B.mainAcc, pdate: today(), pnote: '' }); S.pay = null; render(); const el = document.getElementById('bom-' + S.bomEdit); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); },
+  bomCancel(){ S.bomEdit = null; render(); },
+  async bomSave(){ const b = S.bd; if (!String(b.name || '').trim()) return toast('請填物料名稱');
+    // 改成「已下單」又選「現在記」：存物料＋記付款一次完成
+    let pay = null;
+    if (payNew(b) && b.payNow !== false) { const C = prodCalc(), r = C.rows.find((x) => x.row === S.bomEdit) || {};
+      const def = b.use === '整批' ? num(b.price) : (b.split && r.vs ? r.vs.reduce((t, v) => t + Math.max(0, v.need - num((b.hv || {})[v.id])), 0) : Math.max(0, (r.need || 0) - num(b.have))) * num(b.price);
+      const amt = String(b.pamt).trim() ? num(b.pamt) : def;
+      if (!(amt > 0)) return toast('請填這次付多少（預算是 0，可能還沒填單價）');
+      if (!b.pacc) return toast('請選付款帳戶');
+      pay = { action: 'expense', date: b.pdate || today(), category: bomCat(b), amount: amt, account: b.pacc, party: b.vendor || '', note: b.pnote || '', batch: '第二批', bom: String(b.name).trim() }; }
+    S.busy = true; render();
+    try { await api({ action: 'prodSet', kind: 'bom', row: String(S.bomEdit).indexOf('new') === 0 ? 0 : S.bomEdit, bom: b });
+      let paid = false; if (pay) paid = !!(await send(pay));
+      const at = String(S.bomEdit).indexOf('new') === 0 ? '' : 'bom-' + S.bomEdit;
+      S.bomEdit = null; S.jump = at; toast(paid ? '已存，付款 $' + fmt(pay.amount) + ' 已記下' : '已存'); S.P = null; S.summary = null; await boot(true); } catch(e){ toast(e.message); } S.busy = false; render(); },
+  payOpen(name){ const b = S.P.bom.find((x) => x.name === name); if (!b) return; const r = prodCalc().rows.find((x) => x.name === name) || {};
+    S.pay = { name, amount: Math.max(0, (r.budget || 0) - (r.spent || 0)) || '', account: S.B.mainAcc, date: today(), note: '', category: bomCat(b), vendor: b.vendor || '' }; S.bomEdit = null; render(); },
+  payCancel(){ S.pay = null; render(); },
+  async paySave(){ const f = S.pay; if (!(num(f.amount) > 0)) return toast('請填金額'); if (!f.account) return toast('請選帳戶');
+    S.busy = true; render();
+    try { const r = await send({ action: 'expense', date: f.date, category: f.category, amount: f.amount, account: f.account, party: f.vendor, note: f.note, batch: '第二批', bom: f.name });
+      if (r) { toast('已記付款'); S.pay = null; S.P = null; S.summary = null; await boot(true); } } catch(e){ toast(e.message); } S.busy = false; render(); },
+  async bomDel(){ if (!confirm('刪除「' + S.bd.name + '」這項物料？')) return; S.busy = true; render();
+    try { await api({ action: 'prodSet', kind: 'bomDel', row: S.bomEdit }); S.bomEdit = null; toast('已刪除'); S.P = null; await boot(true); } catch(e){ toast(e.message); } S.busy = false; render(); },
+  async writeCost(){ const C = prodCalc(); if (!confirm('把成本寫進品項表？\n正裝 $' + fmt(C.cPerf) + '、針管組 $' + fmt(C.cSet) + '（單支 $' + fmt(C.cSingle) + '）\n之後每賣出一件，月報會扣這個成本。')) return;
+    S.busy = true; render();
+    try { await api({ action: 'writeCost', costs: { '正裝': C.cPerf, '針管組': C.cSet, '單支針管': C.cSingle } }); toast('已寫進品項表'); S.P = null; S.summary = null; } catch(e){ toast(e.message); } S.busy = false; render(); },
+  buyNew(){ initForms(); Object.assign(S.F.expense, { scope: '店務', category: '', account: S.B.mainAcc, batch: '第二批' }); S.ctx = 'pg'; S.gcats = null; S.anchor = 'buy'; S.action = 'expense'; S.editing = null; render(); },
+  tEdit(id){ const x = (S.B.tasks || []).find((t) => t.id === id); if (!x) return; S.tEdit = id; S.tr = { status: x.status, result: x.result }; render(); },
+  tNew(area){ S.tEdit = 'new:' + area; S.tr = { title: '', desc: '' }; render(); },
+  tCancel(){ S.tEdit = null; render(); },
+  async tSave(){ const isNew = String(S.tEdit).indexOf('new:') === 0;
+    const body = isNew ? { action: 'task', area: S.tEdit.slice(4), title: S.tr.title, desc: S.tr.desc } : { action: 'task', id: S.tEdit, status: S.tr.status, result: S.tr.result };
+    if (isNew && !String(S.tr.title || '').trim()) return toast('請填項目');
+    S.busy = true; render();
+    try { const d = await api(body); S.B.tasks = d.tasks; if (S.P) S.P.tasks = d.tasks; S.tEdit = null; toast('已存'); } catch(e){ toast(e.message); } S.busy = false; render(); },
   role(v){ S.role = v; LS.set('ledger.role', v); S.page = ''; S.action = ''; S.ctx = ''; render(); },
   set(v){ const i = v.indexOf('|'); setPath(v.slice(0, i), v.slice(i + 1)); render(); },
   // 用位置選，不用名稱比對：名稱裡有隱藏換行時也不會選不到
@@ -1279,7 +1544,15 @@ const LIVE = (id) => id.indexOf('m.') === 0 || ['consign.price', 'recon.amount',
 // 日期欄位不重畫整頁：iPhone 的日期選擇器開著時重畫，會讓選擇器失效、改不了日期
 function onDate(el){ setPath(el.dataset.in, el.value); const n = document.getElementById('course-note'); if (n && S.F.course) n.textContent = courseNote(S.F.course); const c = document.getElementById('collab-note'); if (c && S.F.collab) c.textContent = collabNote(S.F.collab); }
 document.addEventListener('input', (e) => { const el = e.target; if (!el.dataset || !el.dataset.in) return; if (el.type === 'date') return onDate(el); setPath(el.dataset.in, el.value); if (LIVE(el.dataset.in)) render(); });
-document.addEventListener('change', (e) => { const el = e.target; if (el.dataset && el.dataset.in && el.type === 'date') onDate(el); });
+document.addEventListener('focusout', (e) => { if (!S.pDirty) return; const r = e.relatedTarget; if (r && r.classList && r.classList.contains('pin')) return; S.pDirty = false; setTimeout(render, 0); });
+document.addEventListener('change', (e) => { const el = e.target; if (el.dataset && el.dataset.in && el.type === 'date') onDate(el);
+  if (el.dataset && (el.dataset.pq || el.dataset.pp)) {   // 第二批：數量、參數改完就存
+    const key = el.dataset.pq || el.dataset.pp, val = num(el.value);
+    if (el.dataset.pq) S.P.qty[key] = val; else S.P.params[key] = val;
+    // 使用者正在跳到下一格時先不重畫，免得剛點的格子被換掉
+    setTimeout(() => { const a = document.activeElement; if (a && a.classList && a.classList.contains('pin')) S.pDirty = true; else render(); }, 0);
+    api({ action: 'prodSet', kind: 'plan', key, value: val }).then(() => toast('已存')).catch((er) => toast(er.message));
+  } });
 
 async function boot(keepForms){
   const d = await api({ action: 'bootstrap' });
