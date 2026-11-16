@@ -107,6 +107,37 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
 .is>span:not(:first-child){text-align:right}.is.h{font-size:11px;color:var(--sub);border-bottom:1px solid var(--line)}.is.t{font-weight:700;border-bottom:0}
 .is .z{color:#A9B6C3}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.big3{display:grid;gap:12px}
+.bigb{display:flex;align-items:center;gap:14px;text-align:left;padding:18px 16px;border-radius:18px;border:1px solid var(--line);background:#fff}
+.bigb i{font-style:normal;width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;flex:none}
+.bigb b{font-size:18px;display:block}.bigb small{color:var(--sub);font-size:13px}
+.bigb.in i{background:#E4F2EA;color:#1F7A4D}.bigb.out i{background:#FBE9DF;color:#A4512A}
+.q{display:grid;gap:8px}
+.qb{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:2px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:#fff}
+.qb b{font-size:15px}.qb small{color:var(--sub);font-size:12.5px;line-height:1.5}
+.qb.on{border-color:var(--deep);box-shadow:0 0 0 2px var(--deep) inset}.qb.unsure{border-style:dashed}
+.sys{font-weight:500;font-size:12.5px;color:#4C7A9A;white-space:nowrap}
+.back{background:none;border:0;color:var(--deep);font-size:14px;padding:4px 0;text-align:left;align-self:flex-start}
+.crumb{font-size:12px;color:var(--sub);letter-spacing:.05em}
+.where{display:flex;flex-wrap:wrap;gap:8px}.where .chip{flex:1 1 auto;white-space:nowrap}
+.ok{background:#E9F5EE;border-radius:12px;padding:12px;color:#1F5A3A;font-size:14px;line-height:1.6}
+.note2{background:#EEF3F8;border-radius:12px;padding:10px 12px;color:var(--deep);font-size:13px;line-height:1.6}
+.recent{font-size:13.5px;gap:0}.recent .r{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid #EEF2F5}.recent .r b{white-space:nowrap}.recent small{color:var(--sub)}
+.mg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mt{position:relative;text-align:left;padding:14px;border-radius:16px;border:1px solid var(--line);background:#fff;display:flex;flex-direction:column;gap:4px}
+.mt b{font-size:16px;padding-right:36px}.mt small{color:var(--sub);font-size:12.5px;line-height:1.45}
+.badge{position:absolute;top:10px;right:10px;background:#C8642E;color:#fff;border-radius:999px;font-size:12px;padding:1px 8px;font-weight:700}
+.badge.g{background:#1F7A4D}.badge.b{background:#4C7A9A}
+.pend{border:1px dashed #D9A55B;background:#FFFBF4;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.pend .top{display:flex;justify-content:space-between;gap:8px}.pend .top b{font-size:15px}.pend small{color:var(--sub);font-size:12.5px}
+.sect{font-weight:700;color:var(--deep);margin:6px 0 0;font-size:14px}
+.iss2{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:center;padding:8px 0;border-top:1px solid #EEF2F5;font-size:14px}
+.iss2 .ck{width:26px;height:26px;border-radius:8px;border:1px solid #A9BBCB;background:#fff;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center}
+.iss2 .ck.on{background:var(--deep);border-color:var(--deep)}.iss2.on b{text-decoration:line-through;color:var(--sub);font-weight:500}
+.iss2 .rt{display:flex;justify-content:space-between;align-items:center;gap:8px}.iss2 .rt .chip{flex:none;white-space:nowrap}
+.blk2{border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px;font-variant-numeric:tabular-nums}.blk2 small{color:var(--sub);font-size:12.5px;line-height:1.5}.blk2 .chip{align-self:flex-start}
+.fc{border-color:var(--blue)}
+.pend .card,.card .card{padding:12px}
 </style>
 </head>
 <body>
@@ -127,7 +158,7 @@ const LS = {
 };
 const S = {
   url: LS.get('isl_url'), user: LS.get('isl_user'), pin: LS.get('isl_pin'),
-  B: null, tab: 'add', action: '', busy: false, editing: null, openEntry: '', month: '', listMonth: '', items: null, summary: null, stockView: 0,
+  B: null, tab: 'add', page: '', ctx: '', anchor: '', cls: null, action: '', busy: false, editing: null, openEntry: '', month: '', listMonth: '', items: null, summary: null, stockView: 0,
   F: {}
 };
 const $ = (s) => document.querySelector(s);
@@ -158,7 +189,7 @@ const accScope = (n) => (S.B.accounts.find((a) => a.name === n) || {}).scope;
 function initForms(){
   const t = today();
   S.F = {
-    sale: { cat: '正裝', channel: '店內', account: '店內現金', cart: [], picks: [], coupons: 0, date: t, note: '' },
+    sale: { cat: '正裝', channel: '店內', account: '店內現金', cart: [], picks: [], coupons: 0, bc: [], brand: '', bp: '', date: t, note: '' },
     course: { course: (S.B.courses[0] || {}).name || '', people: 1, classDate: '', amount: '', account: '公司營運戶', party: '', date: t, note: '' },
     expense: { scope: '店務', category: '運費', amount: '', account: '公司營運戶', party: '', date: t, note: '' },
     collab: { kind: '創業顧問', eventDate: '', people: '', per: '', party: '', amount: '', account: '公司營運戶', date: t, note: '' },
@@ -169,7 +200,10 @@ function initForms(){
     gift: { q: {}, party: '', date: t, note: '' },
     monthly: null,
     transfer: { category: '帳戶間轉帳', from: '店內現金', to: '公司營運戶', amount: '', date: t, note: '' },
-    adjust: { loc: (S.B.stores[0] || {}).name || '店內', state: '良品', q: {}, date: t, note: '' }
+    adjust: { loc: (S.B.stores[0] || {}).name || '店內', state: '良品', q: {}, date: t, note: '' },
+    gweb: { src: '', amount: '', old: '', oldAmt: '', date: t, note: '' },
+    gpend: { dir: 'in', amount: '', desc: '', account: S.B.mainAcc || '', date: t, note: '' },
+    gbrand: { brand: '', amount: '', account: S.B.mainAcc || '', date: t, note: '' }
   };
 }
 function initMonthly(){
@@ -279,26 +313,21 @@ const FIXED_BILLS = ['房租', '網路', '電費', '水費', '勞健保', '發�
 // 付錢時一般可選的帳戶（不含待入帳、各種預留）
 const payAccs = () => accounts().filter((a) => ['收款', '營運', '個人'].indexOf(a.kind) > -1 && !/待入帳$/.test(a.name));
 const expenseAccs = (f) => { const base = payAccs(); if (f.scope !== '店務') return base;
-  const extra = f.category === '營業稅' ? ['稅金預留'] : FIXED_BILLS.indexOf(f.category) > -1 ? ['固定支出預留'] : [];
+  const extra = (f.category === '營業稅' ? ['稅金預留'] : FIXED_BILLS.indexOf(f.category) > -1 ? ['固定支出預留'] : []).filter((n) => !S.B.paused || f.account === n);   // 撥存暫停時，預留帳戶沒有錢，不列出來
   return accounts().filter((a) => extra.indexOf(a.name) > -1).concat(base); };
 const recvAccs = () => accounts().filter((a) => ['收款', '營運', '個人'].indexOf(a.kind) > -1 && !/待入帳$/.test(a.name));
 const itemsOf = (a) => S.B.monthItems.filter((x) => x.group === MGROUP[a] && (x.group !== '結清' || settleSec(x) === a));
 
 function renderAdd(){
-  const q = ACTIONS.filter((a) => a.quick).map((a) => `<button type="button" class="tile ${S.action === a.id ? 'on' : ''}" data-a="act" data-v="${a.id}"><b>${a.label}</b><span>${a.sub}</span></button>`).join('');
-  const goods = ACTIONS.filter((a) => a.sec === 'goods').map((a) => chip(S.action === a.id, 'act', a.id, a.label, 'sq')).join('');
-  const money_ = ACTIONS.filter((a) => a.sec === 'money').map((a) => `<button type="button" class="tile ${S.action === a.id ? 'on' : ''}" data-a="act" data-v="${a.id}"><b>${a.label}</b><span>${a.sub}</span></button>`).join('');
-  let form = '';
-  if (!S.action) form = `<div class="card" style="text-align:center;color:var(--sub)">選一個情況開始記帳<br>錢或貨經過你的手，當下就記一筆</div>`;
-  else form = `<div class="card">${S.editing ? `<div class="hint" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>正在修改：${esc(S.editing.title)}（${esc(S.editing.date)}）<br>儲存後會取代原紀錄</span><button type="button" class="ghost" style="min-height:36px;padding:0 10px;flex:none" data-a="cancelEdit">取消修改</button></div>` : ''}${FORMS[S.action]()}<button type="button" class="save" data-a="save" ${S.busy ? 'disabled' : ''}>${saveLabel()}</button></div>`;
-  // 表單直接展開在被點的那一區下面，其他區塊往下移
-  const cur = (ACTIONS.find((a) => a.id === S.action) || {});
-  const at = cur.quick ? 'quick' : cur.sec || '';
-  const blk = (k, html) => html + (at === k ? form : '');
-  const B = { quick: blk('quick', `<div><p class="lab">常用</p><div class="grid g2">${q}</div></div>`), goods: blk('goods', `<div><p class="lab">貨品</p><div class="grid g3">${goods}</div></div>`), money: blk('money', `<div><p class="lab">店內資金</p><div class="grid g2">${money_}</div></div>`) };
-  // 依分工排：管貨的人貨品在最上面；管錢的人收支、資金在上面
-  const order = homeOrder() === 'goods' ? ['goods', 'quick', 'money'] : ['quick', 'money', 'goods'];
-  return `<div class="sec">${order.map((k) => B[k]).join('')}${at ? '' : form}</div>`;
+  if (S.editing && !S.ctx) return `<div class="sec">${formCard()}</div>`;   // 從明細按「修改」
+  const W = (h) => `<div class="sec">${h}</div>`;
+  if (S.page === 'in' || S.page === 'out') return W(pickCard(S.page));
+  if (S.page === 'g' && S.action) return W(guidedCard());
+  if (S.page === 'week') return W(weekPage());
+  if (S.page === 'routine') return W(routinePage());
+  if (S.page === 'month') return W(monthPage());
+  if (S.page === 'adv') return W(advPage());
+  return role() === 'essen' ? essenHome() : esmeHome();
 }
 function saveLabel(){
   if (S.busy) return '記錄中…';
@@ -311,8 +340,14 @@ function saveLabel(){
 const FORMS = {
   sale(){
     const f = S.F.sale;
-    const items = byCat(f.cat).map((p) => `<button type="button" class="chip" data-a="saleAdd" data-v="${p.id}">+ ${esc(p.name.replace('・單支',''))}<small>(${stockOf('店內', p.id)})</small></button>`).join('');
-    const cart = f.cart.length ? f.cart.map((l) => { const p = prod(l.id); return `<div class="row"><span class="nm"><span>${esc(p.name)}</span><small>${p.price === null ? '未定價，請先到試算表填' : money(p.price) + ' × ' + l.qty + ' = ' + money(p.price * l.qty)}</small></span>${stepper('saleQty', l.id, l.qty)}</div>`; }).join('') : `<p class="lab" style="text-align:center;margin:12px 0">這筆還沒有品項</p>`;
+    const cats = ALLCATS.concat(f.channel === '店內' ? ['寄賣品牌'] : []);
+    const items = f.cat === '寄賣品牌'
+      ? `<div class="chips">${S.B.brands.map((x, i) => chip(f.brand === x.name, 'pickIdx', 'sale.brand|brands|' + i, esc(x.name))).join('')}</div>
+         <div class="grid g2" style="align-items:end;margin-top:8px">${field('sale.bp', '售價（元）', inp('sale.bp', 'number', f.bp, '', '0'))}<button type="button" class="chip sq" style="height:44px" data-a="saleAddB">確認新增</button></div>`
+      : byCat(f.cat).map((p) => `<button type="button" class="chip" data-a="saleAdd" data-v="${p.id}">+ ${esc(p.name.replace('・單支',''))}<small>(${stockOf('店內', p.id)})</small></button>`).join('');
+    const bcs = f.channel === '店內' ? f.bc : [];
+    const cart = f.cart.length || bcs.length ? f.cart.map((l) => { const p = prod(l.id); return `<div class="row"><span class="nm"><span>${esc(p.name)}</span><small>${p.price === null ? '未定價，請先到試算表填' : money(p.price) + ' × ' + l.qty + ' = ' + money(p.price * l.qty)}</small></span>${stepper('saleQty', l.id, l.qty)}</div>`; }).join('')
+      + bcs.map((x, i) => `<div class="row"><span class="nm"><span>${esc(x.brand)}（寄賣品牌）</span><small>售價 ${money(x.price)}</small></span><button type="button" class="ghost" style="min-height:36px;padding:0 10px" data-a="saleDelB" data-v="${i}">刪除</button></div>`).join('') : `<p class="lab" style="text-align:center;margin:12px 0">這筆還沒有品項</p>`;
     const ps = promoState(f);
     let promo = '';
     if (ps && ps.slots) {
@@ -330,19 +365,20 @@ const FORMS = {
     const cv = S.B.couponValue || 500, off = f.coupons * cv;
     const gross = f.cart.reduce((t, l) => t + (prod(l.id).price || 0) * l.qty, 0);
     const total = gross - off;
+    const bcSum = bcs.reduce((t, x) => t + x.price, 0);
     const coupon = f.channel === '店內' && fullQty ? `<div class="promo"><div><div class="t">常態活動</div><b>正裝折抵券 ${money(cv)}</b><div class="lab" style="margin:0">客人用了幾張就填幾張，一瓶正裝最多用一張</div></div><div class="row" style="border:0;padding:0"><span class="nm"><span>使用張數</span><small>${f.coupons ? '折抵 ' + money(off) : '沒有使用'}</small></span>${stepper('coupon', 'n', f.coupons)}</div></div>` : '';
     const HOLD = ['線上付款待入帳', '超商代收待入帳'];
     const payAccs = f.channel === '官網'
       ? `<div><p class="lab">客人怎麼付款</p><div class="chips">${HOLD.filter((n) => accounts().some((a) => a.name === n)).map((n) => chip(f.account === n, 'set', 'sale.account|' + n, n === '線上付款待入帳' ? '刷卡、LINE Pay、轉帳' : '超商貨到付款', 'sq')).join('')}</div></div><div class="hint" style="margin-top:6px">這筆在<b>出貨那天</b>記，收入算出貨那天。錢先記在「待入帳」，帳戶實際收到錢時，再用「錢進帳」記一次。<br>・刷卡、LINE Pay、轉帳：錢通常比出貨早到，先記「錢進帳」也沒關係。<br>・超商貨到付款：出貨後才收到錢。<br>有用 EasyStore 匯入的訂單不要在這裡重複記。</div>`
       : `<div><p class="lab">收款方式</p><div class="chips">${accounts().filter((a) => ['收款','營運','個人'].indexOf(a.kind) > -1 && HOLD.indexOf(a.name) < 0).map((a) => chip(f.account === a.name, 'set', 'sale.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>`;
     const warn = f.channel === '店內' && accScope(f.account) === '個人' ? `<div class="hint">店的收入進了個人帳戶，會算進「個人帳戶和店的往來」。之後轉回店裡時，用「個人帳戶和店的往來 › 個人帳戶轉回店裡」。</div>` : '';
-    return `<h3>商品銷售</h3>
-      <div class="grid g2">${chip(f.channel === '店內', 'set', 'sale.channel|店內', '店內', 'sq')}${chip(f.channel === '官網', 'set', 'sale.channel|官網', '官網訂單', 'sq')}</div>
-      <div class="grid g4">${ALLCATS.map((c) => chip(f.cat === c, 'set', 'sale.cat|' + c, c, 'sq')).join('')}</div>
-      <div><p class="lab">點品項加入這筆（括號內為店內庫存）</p><div class="chips">${items}</div></div>
+    return `<h3>${S.ctx === 'g' ? '客人買了什麼？' : '商品銷售'}</h3>
+      ${S.ctx === 'g' ? '' : `<div class="grid g2">${chip(f.channel === '店內', 'set', 'sale.channel|店內', '店內', 'sq')}${chip(f.channel === '官網', 'set', 'sale.channel|官網', '官網訂單', 'sq')}</div>`}
+      <div class="grid ${cats.length > 4 ? 'g3' : 'g4'}">${cats.map((c) => chip(f.cat === c, 'set', 'sale.cat|' + c, c, 'sq')).join('')}</div>
+      <div><p class="lab">${f.cat === '寄賣品牌' ? '選品牌、填售價，按「確認新增」（一件一件加）' : '點品項加入這筆（括號內為店內庫存）'}</p>${f.cat === '寄賣品牌' ? items : `<div class="chips">${items}</div>`}</div>
       <div style="border:1px solid var(--line);border-radius:12px;padding:2px 12px">${cart}</div>
       ${coupon}${promo}${payAccs}${warn}
-      <div class="sum">${off ? `<div class="kv s"><span>原價</span><span>${money(gross)}</span></div><div class="kv s"><span>折抵券 ×${f.coupons}</span><span>−${money(off)}</span></div>` : ''}<div class="kv b"><span>${f.channel === '官網' ? '訂單金額' : '應收'}</span><span>${money(total)}</span></div><div class="kv s"><span>其中營業稅</span><span>${money(total - total / 1.05)}</span></div>${ps && ps.gifts.length ? `<div class="kv s"><span>贈品（不算收入，扣庫存）</span><span>${ps.gifts.map((g) => esc(prod(g.id).name) + '×' + g.qty).join('、')}</span></div>` : ''}</div>
+      <div class="sum">${off ? `<div class="kv s"><span>原價</span><span>${money(gross)}</span></div><div class="kv s"><span>折抵券 ×${f.coupons}</span><span>−${money(off)}</span></div>` : ''}${bcSum ? `<div class="kv s"><span>自己的商品</span><span>${money(total)}</span></div><div class="kv s"><span>寄賣品牌商品（大部分要付給品牌）</span><span>${money(bcSum)}</span></div>` : ''}<div class="kv b"><span>${f.channel === '官網' ? '訂單金額' : '應收'}</span><span>${money(total + bcSum)}</span></div><div class="kv s"><span>其中營業稅</span><span>${money(total - total / 1.05 + bcSum * 0.05)}</span></div>${ps && ps.gifts.length ? `<div class="kv s"><span>贈品（不算收入，扣庫存）</span><span>${ps.gifts.map((g) => esc(prod(g.id).name) + '×' + g.qty).join('、')}</span></div>` : ''}</div>
       ${dateNote(f, 'sale', f.channel === '官網' ? '出貨日期' : '日期')}`;
   },
   course(){
@@ -363,7 +399,8 @@ const FORMS = {
   expense(){
     const f = S.F.expense;
     const all = S.B.categories;
-    const groups = f.scope === '店務'
+    const only = (S.ctx === 'g' || S.ctx === 'pg') && S.gcats;
+    const groups = only ? [[S.glabel || '類別', S.gcats]] : f.scope === '店務'
       ? [['固定帳單', all.filter((c) => FIXED_BILLS.indexOf(c.name) > -1).map((c) => c.name)],
          ['進貨與製作', all.filter((c) => c.group === '營業成本').map((c) => c.name)],
          ['日常開銷', all.filter((c) => c.group === '營業費用' && FIXED_BILLS.indexOf(c.name) < 0).map((c) => c.name)],
@@ -375,14 +412,17 @@ const FORMS = {
       : f.scope === '店務' && accScope(f.account) === '個人' ? '用個人的錢付店的支出，會自動記成「代墊」，月報會累計未還金額。'
       : f.scope === '店務' && f.account === '固定支出預留' ? '從每月撥存的「固定支出預留」付，不會動到營運的錢。'
       : f.scope === '個人' && accScope(f.account) === '店務' ? '個人開銷從店的帳戶付出，等於直接從店裡拿錢。比較乾淨的做法：先發薪水到個人帳戶，再從個人帳戶付。' : '';
-    return `<h3>支出</h3>
-      <div class="grid g2">${chip(f.scope === '店務', 'set', 'expense.scope|店務', '店務', 'sq')}${chip(f.scope === '個人', 'set', 'expense.scope|個人', '個人', 'sq')}</div>
-      ${groups.filter((g) => g[1].length).map(([g, names]) => `<div><p class="lab">${g}</p><div class="chips">${names.map((n) => chip(f.category === n, 'set', 'expense.category|' + n, esc(n))).join('')}</div></div>`).join('')}
+    const ship = S.gk === 'out:ship' && only;
+    return `<h3>${!only ? '支出' : ship ? '寄什麼、用哪家？' : S.gk === 'out:tax' ? '繳營業稅' : S.glabel || '支出'}</h3>
+      ${only ? '' : `<div class="grid g2">${chip(f.scope === '店務', 'set', 'expense.scope|店務', '店務', 'sq')}${chip(f.scope === '個人', 'set', 'expense.scope|個人', '個人', 'sq')}</div>`}
+      ${ship ? '<div class="hint">這裡記「寄出去」的運費。廠商寄貨給我們的運費，記在「店裡其他開銷 › 收貨運費」。</div>' : ''}
+      ${only && S.gcats.length < 2 ? '' : groups.filter((g) => g[1].length).map(([g, names]) => `<div>${only ? '' : `<p class="lab">${g}</p>`}<div class="chips">${names.map((n) => chip(f.category === n, 'set', 'expense.category|' + n, esc(n))).join('')}</div></div>`).join('')}
+      ${f.category === '收貨運費' ? '<div class="hint">廠商、淘寶寄貨給我們時付的運費記在這裡，對象填哪家廠商。</div>' : ''}
       ${field('expense.amount', '金額（照收據填）', inp('expense.amount', 'number', f.amount, 'big', '0'))}
       <div><p class="lab">用哪個帳戶付</p><div class="chips">${accs.map((a) => chip(f.account === a.name, 'set', 'expense.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>
       ${warn ? `<div class="hint">${warn}</div>` : ''}
-      ${f.category === '運費' ? `<div><p class="lab">寄件方式（點一下帶入對象）</p><div class="grid g4">${['全家', '萊爾富', '郵局', '黑貓'].map((k) => chip(f.party === k, 'set', 'expense.party|' + k, k, 'sq')).join('')}</div></div>` : ''}
-      ${isTax ? '' : field('expense.party', '對象（選填，例：黑貓、某廠商）', inp('expense.party', 'text', f.party))}
+      ${f.category === '運費' ? `<div><p class="lab">寄件方式（點一下帶入對象）</p><div class="grid g3">${['全家', '萊爾富', '郵局', '黑貓'].map((k) => chip(f.party === k, 'set', 'expense.party|' + k, k, 'sq')).join('')}${chip(!!f.oth && ['全家', '萊爾富', '郵局', '黑貓'].indexOf(f.party) < 0, 'set', 'expense.oth|1', '其他', 'sq')}</div></div>` : ''}
+      ${isTax ? '' : field('expense.party', f.category === '運費' && f.oth && ['全家', '萊爾富', '郵局', '黑貓'].indexOf(f.party) < 0 ? '用哪家寄？（例：順豐、店到店）' : '對象（選填，例：黑貓、某廠商）', inp('expense.party', 'text', f.party))}
       ${dateNote(f, 'expense')}`;
   },
   collab(){
@@ -426,7 +466,7 @@ const FORMS = {
     const st = tg.cfg || {};
     const months = [-2, -1, 0].map((d) => addMonth(curMonth(), d));
     const head = `<h3>寄售對帳／收款</h3>
-      <div class="grid g2">${chip(f.mode === '對帳', 'set', 'recon.mode|對帳', '對帳（報表到了）', 'sq')}${chip(f.mode === '收款', 'set', 'recon.mode|收款', '收款（錢到了）', 'sq')}</div>
+      ${S.ctx === 'g' || S.ctx === 'cls' ? '' : `<div class="grid g2">${chip(f.mode === '對帳', 'set', 'recon.mode|對帳', '對帳（報表到了）', 'sq')}${chip(f.mode === '收款', 'set', 'recon.mode|收款', '收款（錢到了）', 'sq')}</div>`}
       <div class="grid g2">${T.map((x, i) => chip(f.store === x.key, 'reconT', i, esc(x.label), 'sq')).join('')}</div>
       <div><p class="lab">銷售月份（收入算在這個月，不是收款日）</p><div class="grid g3">${months.map((m) => chip(f.salesMonth === m, 'set', 'recon.salesMonth|' + m, m.replace('-', ' / '), 'sq')).join('')}</div></div>`;
     if (f.mode === '收款') {
@@ -509,6 +549,38 @@ const FORMS = {
       ${field('adjust.note', '原因（必填，例：盤點少 1 組、破損 1 瓶）', inp('adjust.note', 'text', f.note))}
       ${field('adjust.date', '日期', inp('adjust.date', 'date', f.date))}`;
   },
+  gweb(){
+    const f = S.F.gweb, it = webItem(f.src), amt = num(f.amount), oa = num(f.oldAmt), so = showOld();
+    const res = !f.src || !amt ? '' : !so || f.old === '沒有' ? '整筆記成錢進帳（開帳後官網訂單的錢到了）。'
+      : f.old === '全部都是' ? '整筆記成「開帳前的舊帳（期初資金）」，不算本月收入。'
+      : f.old === '有一部分' ? '會自動拆成兩筆：開帳前的 ' + money(oa) + ' 記期初資金，其餘 ' + money(amt - oa) + ' 記錢進帳。'
+      : f.old === '不確定' ? '這筆先記成「待確認」，Essen 對帳時會看撥款明細處理，你不用再管它。' : '';
+    return `<h3>誰撥的款？</h3>
+      <div class="q">${[['cvs', '便利配（超商取貨付款）', 'ezShip 匯款'], ['web', '藍新、LINE Pay（線上付款）', '刷卡、LINE Pay、銀行轉帳']].map(([k, t, s]) => `<button type="button" class="qb ${f.src === k ? 'on' : ''}" data-a="set" data-v="gweb.src|${k}"><b>${t}</b><small>${s}</small></button>`).join('')}</div>
+      ${field('gweb.amount', '銀行實際進來多少', inp('gweb.amount', 'number', f.amount, 'big', '0'))}
+      ${so ? `<div><p class="lab"><b style="color:var(--deep)">這筆撥款裡，有開帳前（${md(S.B.openDate)} 以前下單）的訂單嗎？</b></p><div class="where">${['沒有', '有一部分', '全部都是', '不確定'].map((x) => chip(f.old === x, 'set', 'gweb.old|' + x, x, 'sq')).join('')}</div><small style="color:var(--sub)">看撥款明細裡的訂單日期。</small></div>` : ''}
+      ${so && f.old === '有一部分' ? field('gweb.oldAmt', '其中開帳前訂單的金額', inp('gweb.oldAmt', 'number', f.oldAmt, '', '0')) : ''}
+      ${res ? `<div class="ok">${res}</div>` : ''}
+      <p class="lab" style="margin:0">錢會記進「${esc(it ? it.to : S.B.mainAcc)}」（試算表「設定」的官網款項入帳帳戶）。</p>
+      ${dateNote(f, 'gweb', '入帳日期')}`;
+  },
+  gpend(){
+    const f = S.F.gpend, isIn = f.dir !== 'out';
+    return `<h3>先記下來就好</h3><p class="lab" style="margin:0">不確定記在哪裡沒關係，寫一句你知道的事，Essen 會在每週對帳時幫你歸類。</p>
+      ${field('gpend.amount', '金額', inp('gpend.amount', 'number', f.amount, 'big', '0'))}
+      ${field('gpend.desc', '這是什麼錢？（一句話）', inp('gpend.desc', 'text', f.desc, '', isIn ? '例：銀行進來 3,444，不知道是誰匯的' : '例：買了掛勾，不知道算哪類'))}
+      <div><p class="lab">${isIn ? '錢進了哪裡？' : '用哪裡的錢付？'}</p><div class="chips">${(isIn ? recvAccs() : payAccs()).map((a) => chip(f.account === a.name, 'set', 'gpend.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>
+      ${dateNote(f, 'gpend')}`;
+  },
+  gbrand(){
+    const f = S.F.gbrand;
+    return `<h3>付給哪個品牌？</h3>
+      <div class="chips">${S.B.brands.map((x, i) => chip(f.brand === x.name, 'pickIdx', 'gbrand.brand|brands|' + i, esc(x.name))).join('')}</div>
+      ${field('gbrand.amount', '金額（目前所有品牌合計應付 ' + money(S.B.close.payable) + '）', inp('gbrand.amount', 'number', f.amount, 'big', '0'))}
+      <div><p class="lab">用哪裡的錢付？</p><div class="chips">${payAccs().map((a) => chip(f.account === a.name, 'set', 'gbrand.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>
+      ${accScope(f.account) === '個人' ? '<div class="hint">用個人的錢付，會自動記成「代墊」，之後店再還。</div>' : ''}
+      ${dateNote(f, 'gbrand')}`;
+  },
   transfer(){
     const f = S.F.transfer;
     const DESC = { '帳戶間轉帳': '店裡帳戶之間搬錢，例：現金存銀行、LINE Pay 撥進銀行', '業主投入資金': '業主從個人存款拿錢補進店裡', '業主薪資提取': '業主從店裡領錢（薪水或分紅）', '期初資金': '開帳時的存款，或開帳日以前的舊帳的錢（例：10 月訂單的匯款）' };
@@ -551,10 +623,247 @@ function moneyForm(action, title, desc, numbered){
     ${field('monthly.date', '日期', inp('monthly.date', 'date', f.date))}`;
 }
 
+/* ───────── 首頁：依角色（Esme 版／Essen 版） ───────── */
+function role(){ if (S.role === undefined) S.role = LS.get('ledger.role'); return S.role || (S.user === 'Essen' ? 'essen' : 'esme'); }
+const GIN = [
+  ['shop', '客人在店裡買東西', '商品銷售', '自己的香水、針管、分裝瓶，和寄賣品牌的商品'],
+  ['course', '學員付課程費', '課程收款', '體驗課、證書班'],
+  ['collab', '品牌合作的錢', '品牌合作', '顧問費、活動企劃費、報名抽成'],
+  ['web', '便利配或藍新撥款進來', '錢進帳', '官網訂單的錢到帳了'],
+  ['store', '寄售點匯款進來', '寄售收款', '模範、如寄、ASA 匯的貨款'],
+  ['unsure', '不確定記在哪裡', '待確認', '先記下來，Essen 會幫你歸類']];
+const GOUT = [
+  ['bill', '房租、水電、網路帳單', '支出・固定帳單', '每月固定的帳單'],
+  ['buy', '買原料、瓶子、包材、耗材', '支出・進貨與製作', '做香水、上課要用的東西'],
+  ['ship', '寄東西的運費', '支出・運費', '寄出去的運費（收貨的運費記在店裡其他開銷）'],
+  ['misc', '店裡其他開銷', '支出・日常開銷', '陳列、廣告、樣品、軟體、收貨運費…'],
+  ['tax', '繳營業稅', '支出・營業稅', '兩個月一次'],
+  ['brand', '付錢給寄賣品牌', '付款與繳稅・代售貨款', '把代售賣掉的錢付給品牌'],
+  ['unsure', '不確定記在哪裡', '待確認', '先記下來，Essen 會幫你歸類']];
+const back = (v, label) => `<button type="button" class="back" data-a="pg" data-v="${v}">‹ ${label || '回首頁'}</button>`;
+const md = (d) => Number(d.slice(5, 7)) + '/' + Number(d.slice(8, 10));
+const webItem = (src) => S.B.monthItems.find((x) => x.group === '結清' && x.from === (src === 'cvs' ? '超商代收待入帳' : '線上付款待入帳'));
+const showOld = () => curMonth() <= addMonth((S.B.openDate || '2026-11-01').slice(0, 7), 1);   // 開帳後兩個月內才問「有沒有開帳前的訂單」
+
+function formCard(){
+  const ban = !S.editing ? '' : S.ctx === 'cls'
+    ? `<div class="hint" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>正在歸類：${esc(S.editing.title)}<br>儲存後會取代原本的待確認紀錄</span><button type="button" class="ghost" style="min-height:36px;padding:0 10px;flex:none" data-a="clsCancel">取消</button></div>`
+    : `<div class="hint" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>正在修改：${esc(S.editing.title)}（${esc(S.editing.date)}）<br>儲存後會取代原紀錄</span><button type="button" class="ghost" style="min-height:36px;padding:0 10px;flex:none" data-a="cancelEdit">取消修改</button></div>`;
+  const note = S.page === 'adv' ? advNote() : '';
+  return `<div class="card fc">${ban}${note ? `<div class="note2"><b>日常不用來這裡：</b>${note}</div>` : ''}${FORMS[S.action]()}<button type="button" class="save" data-a="save" ${S.busy ? 'disabled' : ''}>${saveLabel()}</button></div>`;
+}
+
+function esmeHome(){
+  const mine = S.B.pending.filter((p) => p.user === S.user).length;
+  const rec = (S.B.recent || []).map((t) => { const e = entryText(t); return `<div class="r"><span>${esc(e.title)}<br><small>${md(t.date)}・${esc(e.sub)}</small></span><b class="${e.c}">${esc(e.amt)}</b></div>`; }).join('');
+  return `<div class="sec"><div class="big3">${bigBtn('in')}${bigBtn('out')}</div>
+    ${mine ? `<div class="hint">你有 ${mine} 筆「待確認」，Essen 對帳時會處理，不用再管它。</div>` : ''}
+    ${rec ? `<div class="card recent"><b>你最近記的</b>${rec}</div>` : ''}
+    <p class="lab" style="text-align:center">庫存、寄售送貨、對帳、月底結算由 Essen 處理。</p></div>`;
+}
+const bigBtn = (d) => d === 'in'
+  ? `<button type="button" class="bigb in" data-a="pg" data-v="in"><i>＋</i><span><b>收到錢</b><small>賣東西、課程、品牌合作、撥款、匯款</small></span></button>`
+  : `<button type="button" class="bigb out" data-a="pg" data-v="out"><i>－</i><span><b>付錢出去</b><small>帳單、進貨、運費、繳稅、付品牌</small></span></button>`;
+
+function essenHome(){
+  if (S.issuesMonth !== curMonth()) loadIssues();
+  const goods = ACTIONS.filter((a) => a.sec === 'goods').map((a) => chip(S.action === a.id && !S.ctx, 'act', a.id, a.label, 'sq')).join('');
+  const pend = S.B.pending.length, loaded = S.issuesMonth === curMonth();
+  const iss = loaded ? (S.issues || []).filter((x) => !x.done).length : 0;
+  const R = S.B.routine || [], rd = R.filter((x) => x.done).length;
+  return `<div class="sec">
+    <div><p class="lab">貨品</p><div class="grid g3">${goods}</div></div>
+    ${S.action && !S.ctx ? formCard() : ''}
+    <div><p class="lab">記帳（跟 Esme 同一套）</p><div class="grid g2"><button type="button" class="tile" data-a="pg" data-v="in"><b>＋ 收到錢</b><span>賣東西、課程、合作、撥款</span></button><button type="button" class="tile" data-a="pg" data-v="out"><b>－ 付錢出去</b><span>帳單、進貨、運費、繳稅</span></button></div></div>
+    <div><p class="lab">管理</p><div class="mg">
+      <button type="button" class="mt" data-a="pg" data-v="week">${pend + iss ? `<span class="badge">${pend + iss}</span>` : loaded ? '<span class="badge g">✓</span>' : ''}<b>每週對帳</b><small>待確認 ${pend} 筆・需要處理 ${loaded ? iss + ' 項' : '…'}</small></button>
+      <button type="button" class="mt" data-a="pg" data-v="routine"><span class="badge b">${rd}/${R.length}</span><b>本月例行</b><small>帳單、寄售對帳、繳稅、往來結算</small></button>
+      <button type="button" class="mt" data-a="pg" data-v="month"><b>月底結算</b><small>往來結算、付品牌貨款、營業稅、撥存</small></button>
+      <button type="button" class="mt" data-a="pg" data-v="adv"><b>進階記帳</b><small>錢進帳、其他轉帳、完整表單，修帳用</small></button>
+    </div></div></div>`;
+}
+let issuesLoading = false;
+async function loadIssues(){
+  if (issuesLoading) return; issuesLoading = true;
+  try { const m = curMonth(); const d = await api({ action: 'summary', month: m }); S.issues = d.issues || []; S.issuesMonth = m; if (S.month === m) S.summary = d.summary; }
+  catch(e){ S.issues = []; S.issuesMonth = curMonth(); }
+  issuesLoading = false; render();
+}
+
+// 收到錢／付錢出去：選一種情況
+function pickCard(dir){
+  const L = dir === 'in' ? GIN : GOUT;
+  return `<div class="card">${back('')}<div class="crumb">${dir === 'in' ? '收到錢' : '付錢出去'}</div><h3>${dir === 'in' ? '錢從哪來？' : '付給誰、為什麼？'}</h3>
+    <div class="q">${L.map(([k, t, sys, s]) => `<button type="button" class="qb ${k === 'unsure' ? 'unsure' : ''}" data-a="gstart" data-v="${dir}:${k}"><b>${t} <span class="sys">→ ${sys}</span></b><small>${s}</small></button>`).join('')}</div></div>`;
+}
+function gstart(k, o){
+  o = o || {}; initForms(); S.editing = null; S.cls = null;
+  S.gk = k; S.gBack = o.back || k.split(':')[0]; S.page = 'g'; S.ctx = 'g'; S.gcats = null; S.glabel = ''; S.anchor = '';
+  const F = S.F, main = S.B.mainAcc, paused = S.B.paused;
+  const cats = (g) => S.B.categories.filter((c) => c.group === g).map((c) => c.name);
+  switch (k) {
+    case 'in:shop': S.action = 'sale'; F.sale.channel = '店內'; break;
+    case 'in:course': S.action = 'course'; F.course.account = main; break;
+    case 'in:collab': S.action = 'collab'; F.collab.account = main; break;
+    case 'in:store': S.action = 'recon'; Object.assign(F.recon, { mode: '收款', account: main }); break;
+    case 'in:web': S.action = 'gweb'; break;
+    case 'in:unsure': S.action = 'gpend'; F.gpend.dir = 'in'; break;
+    case 'out:unsure': S.action = 'gpend'; F.gpend.dir = 'out'; break;
+    case 'out:brand': S.action = 'gbrand'; break;
+    default: {
+      S.action = 'expense'; const f = F.expense; f.scope = '店務'; f.category = ''; f.account = main;
+      if (k === 'out:bill') { S.gcats = FIXED_BILLS.filter((n) => S.B.categories.some((c) => c.name === n)); S.glabel = '哪一張帳單？'; if (!paused) f.account = '固定支出預留'; }
+      if (k === 'out:buy') { S.gcats = cats('營業成本'); S.glabel = '買了什麼？'; }
+      if (k === 'out:ship') { S.gcats = ['運費']; f.category = '運費'; }
+      if (k === 'out:misc') { const l = cats('營業費用').filter((n) => FIXED_BILLS.indexOf(n) < 0 && n !== '運費'); S.gcats = l.filter((n) => n !== '其他費用').concat(l.indexOf('其他費用') > -1 ? ['其他費用'] : []); S.glabel = '是哪一種？'; }
+      if (k === 'out:tax') { S.gcats = ['營業稅']; f.category = '營業稅'; if (!paused) f.account = '稅金預留'; }
+      if (o.category) f.category = o.category;
+      if (o.amount) f.amount = o.amount;
+    }
+  }
+}
+function guidedCard(){
+  const [dir, key] = S.gk.split(':');
+  const o = (dir === 'in' ? GIN : GOUT).find((x) => x[0] === key) || ['', '', ''];
+  return `<div class="card">${back(S.gBack, '上一步')}<div class="crumb">${dir === 'in' ? '收到錢' : '付錢出去'} › ${o[2]}</div>${FORMS[S.action]()}<button type="button" class="save" data-a="save" ${S.busy ? 'disabled' : ''}>${saveLabel()}</button></div>`;
+}
+
+/* ───────── Essen：每週對帳 ───────── */
+const CLS_IN = [
+  ['opening', '期初資金', '開帳前的舊帳、或開帳時帳戶裡原本就有的錢，不算收入'],
+  ['web', '錢進帳・線上付款', '藍新、LINE Pay 撥款（官網訂單）'],
+  ['cvs', '錢進帳・便利配', '超商取貨付款撥款（官網訂單）'],
+  ['split', '拆成兩筆', '一部分是開帳前舊帳、一部分是錢進帳'],
+  ['course', '課程收款', '打開表單，補課程和上課日期'],
+  ['collab', '品牌合作', '打開表單，補類型和對象'],
+  ['store', '寄售收款', '打開表單，補寄售點和月份'],
+  ['sale', '商品銷售', '打開表單，補品項'],
+  ['transfer', '其他轉帳', '打開表單（例：業主投入資金）']];
+const CLS_OUT = [
+  ['裝飾陳列', '裝飾陳列', '店內陳列、裝潢小物'],
+  ['耗材', '耗材', '消耗性用品'],
+  ['收貨運費', '收貨運費', '廠商寄貨給我們的運費'],
+  ['其他費用', '其他費用', '真的歸不了類的'],
+  ['personal', '個人支出', '其實是私人花費，打開表單選分類'],
+  ['other', '其他分類', '打開支出表單']];
+const CLS_FORM = ['course', 'collab', 'store', 'sale', 'transfer', 'personal', 'other'];
+function weekPage(){
+  if (S.issuesMonth !== curMonth()) loadIssues();
+  const P = S.B.pending;
+  const card = (p) => { const open = S.cls && S.cls.id === p.id;
+    return `<div class="pend"><div class="top"><b>${p.dir === 'in' ? '收到' : '付出'} ${money(p.amount)}</b><small>${md(p.date)}・${esc(p.user)}</small></div>
+      <span>「${esc(p.desc)}」</span><small>${p.dir === 'in' ? '錢進了' : '從'}：${esc(p.acc)}${p.note ? '・' + esc(p.note) : ''}</small>
+      ${open ? (S.action && S.ctx === 'cls' ? formCard() : clsPicker(p)) : `<button type="button" class="chip sq" style="align-self:flex-start" data-a="clsOpen" data-v="${esc(p.id)}">歸類</button>`}</div>`; };
+  const iss = S.issuesMonth === curMonth() ? issuesCard() || '<p class="lab" style="margin:0">本月沒有需要處理的項目。</p>' : '<p class="lab" style="margin:0">檢查中…</p>';
+  return `<div class="card">${back('')}<h3>每週對帳</h3>
+    <p class="sect">待確認（「不確定記在哪裡」記的）</p>${P.length ? P.map(card).join('') : '<p class="lab" style="margin:0">目前沒有待確認的紀錄。</p>'}
+    <p class="sect">需要處理（系統自動檢查 ${curMonth().replace('-', '/')}）</p></div>${iss}`;
+}
+function clsPicker(p){
+  const opts = p.dir === 'in' ? CLS_IN : CLS_OUT, c = S.cls;
+  const sp = c.pick === 'split' ? `<div class="chips">${chip(c.src === 'cvs', 'set', 'cls.src|cvs', '錢進帳・便利配', 'sq')}${chip(c.src === 'web', 'set', 'cls.src|web', '錢進帳・線上付款', 'sq')}</div>
+    ${field('cls.old', '其中開帳前舊帳的金額', inp('cls.old', 'number', c.old, '', '0'))}
+    <div class="ok" style="padding:8px 10px">期初資金 ${money(num(c.old))}＋錢進帳 ${money(p.amount - num(c.old))}</div>` : '';
+  return `<p class="lab" style="margin:4px 0 0"><b style="color:var(--deep)">這筆應該是？</b></p>
+    <div class="q">${opts.map(([k, t, s]) => `<button type="button" class="qb ${c.pick === k ? 'on' : ''}" data-a="clsPick" data-v="${k}"><b>${t}</b><small>${s}</small></button>`).join('')}</div>${sp}
+    <div class="grid g2"><button type="button" class="ghost" data-a="clsCancel">取消</button><button type="button" class="save" style="margin:0" data-a="clsOk" ${S.busy ? 'disabled' : ''}>確認歸類</button></div>`;
+}
+function clsForm(p, k){
+  initForms(); const F = S.F, base = { date: p.date, note: p.desc };
+  if (k === 'course') { Object.assign(F.course, base, { amount: p.amount, account: p.acc }); S.action = 'course'; }
+  if (k === 'collab') { Object.assign(F.collab, base, { amount: p.amount, account: p.acc }); S.action = 'collab'; }
+  if (k === 'store') { Object.assign(F.recon, base, { mode: '收款', amount: p.amount, account: p.acc }); S.action = 'recon'; }
+  if (k === 'sale') { Object.assign(F.sale, base, { channel: '店內', account: p.acc }); S.action = 'sale'; }
+  if (k === 'transfer') { Object.assign(F.transfer, base, { category: '業主投入資金', from: '個人帳戶', to: p.acc, amount: p.amount }); S.action = 'transfer'; }
+  if (k === 'personal') { Object.assign(F.expense, base, { scope: '個人', category: '其他個人', amount: p.amount, account: p.acc }); S.action = 'expense'; }
+  if (k === 'other') { Object.assign(F.expense, base, { scope: '店務', category: '', amount: p.amount, account: p.acc }); S.action = 'expense'; }
+  S.ctx = 'cls'; S.editing = { id: p.id, title: '「' + p.desc + '」' + money(p.amount), date: p.date };
+}
+
+/* ───────── Essen：本月例行 ───────── */
+function routinePage(){
+  const R = S.B.routine || [], d = R.filter((x) => x.done).length;
+  return `<div class="card">${back('')}<h3>${Number(curMonth().slice(5))} 月例行</h3><div class="bar"><i style="width:${R.length ? d / R.length * 100 : 0}%"></i></div>
+    <small style="color:var(--sub)">記了對應的帳會自動打勾；點「去記」直接打開那張表單。</small>
+    ${R.map((x, i) => `<div class="iss2 ${x.done ? 'on' : ''}"><span class="ck ${x.done ? 'on' : ''}">${x.done ? '✓' : ''}</span><span class="rt"><b>${esc(x.label)}</b>${x.done || S.anchor === 'r' + i ? '' : `<button type="button" class="chip sq" data-a="rgo" data-v="${i}">去記</button>`}</span></div>${S.anchor === 'r' + i && S.action ? formCard() : ''}`).join('')}</div>`;
+}
+function openSettle(a, label){
+  S.F.monthly = null; initMonthly(); const f = S.F.monthly;
+  itemsOf(a).forEach((x) => { f.ticks[x.key] = label ? x.label === label : num(f.amounts[x.key]) > 0; });
+  S.action = a;
+}
+function goTask(x, anchor){
+  initForms(); S.ctx = 'pg'; S.anchor = anchor; S.editing = null; S.gk = ''; S.gcats = x.go === 'bill' ? FIXED_BILLS.filter((n) => S.B.categories.some((c) => c.name === n)) : x.go === 'tax' ? ['營業稅'] : null; S.glabel = x.go === 'bill' ? '哪一張帳單？' : '';
+  const F = S.F, main = S.B.mainAcc, paused = S.B.paused;
+  if (x.go === 'bill') { Object.assign(F.expense, { scope: '店務', category: x.category, amount: x.amount || '', account: paused ? main : '固定支出預留' }); S.action = 'expense'; }
+  else if (x.go === 'tax') { Object.assign(F.expense, { scope: '店務', category: '營業稅', amount: x.amount || '', account: paused ? main : '稅金預留' }); S.action = 'expense'; }
+  else if (x.go === 'recon') { Object.assign(F.recon, { mode: '對帳', store: x.store, salesMonth: x.salesMonth }); S.action = 'recon'; }
+  else if (x.go === 'owe') openSettle('settleOwe');
+  else if (x.go === 'pay') { Object.assign(F.gbrand, { account: main }); S.action = 'gbrand'; }
+  else if (x.go === 'monthly') openSettle('monthly');
+}
+
+/* ───────── Essen：月底結算 ───────── */
+function monthPage(){
+  const c = S.B.close, o = c.owe, v = c.vat, paused = S.B.paused;
+  const kv = (k, val, cls) => `<div class="kv ${cls || ''}"><span>${k}</span><span>${val}</span></div>`;
+  const head = o.net > 0 ? '個人帳戶要轉給店' : o.net < 0 ? '店要還個人帳戶' : '已經結清';
+  const md2 = (m) => m.slice(5).replace(/^0/, '');
+  const per = (p) => { const [a, b] = p.split('～'); return md2(a) + '–' + md2(b) + ' 月'; };
+  const f = (a) => S.anchor === a && S.action ? formCard() : '';
+  const taxLeft = v.isFiling ? Math.max(0, v.prevDue - v.paidThisMonth) : 0;
+  return `<div class="card">${back('')}<h3>月底結算</h3>
+    <div class="blk2"><b>個人帳戶和店的往來</b>
+      ${kv('店的錢進了個人帳戶', money(o.inPersonal))}${kv('個人幫店付的（代墊）', '−' + money(o.advanced))}
+      ${o.returned ? kv('已經轉回店裡', '−' + money(o.returned)) : ''}${o.repaid ? kv('店已經還給個人', money(o.repaid)) : ''}
+      ${kv('＝ ' + head, money(Math.abs(o.net)), 'b')}
+      ${o.net && S.anchor !== 'owe' ? `<button type="button" class="chip sq" data-a="mgo" data-v="owe">記一筆「${o.net < 0 ? '代墊歸還' : '個人帳戶轉回店裡'}」</button>` : ''}</div>${f('owe')}
+    <div class="blk2"><b>付代售品牌貨款</b>${kv('目前應付（所有品牌合計）', money(c.payable))}
+      ${c.payable && S.anchor !== 'pay' ? '<button type="button" class="chip sq" data-a="mgo" data-v="pay">記一筆付款</button>' : ''}</div>${f('pay')}
+    <div class="blk2"><b>營業稅</b>${kv(per(v.period) + ' 累計應提', money(v.accrued))}
+      <small>這一期在 ${v.deadline.replace(/-/g, '/')} 前申報${v.isFiling && v.prevDue ? `；上一期 ${per(v.prevPeriod)} 應繳 ${money(v.prevDue)}${v.paidThisMonth ? '，已記繳納 ' + money(v.paidThisMonth) : '，還沒記繳納'}` : ''}</small>
+      ${taxLeft && S.anchor !== 'tax' ? `<button type="button" class="chip sq" data-a="mgo" data-v="tax">記一筆繳稅 ${money(taxLeft)}</button>` : ''}</div>${f('tax')}
+    <div class="blk2"><b>月初撥存${paused ? '（暫停中）' : ''}</b><small>${paused ? '公司戶和將來銀行口袋開好前先不用記。暫停時，帳單和營業稅直接從實際付款的帳戶記。' : '每月 1–5 號把錢撥到固定支出、稅金、原料、耗材預留。'}</small>
+      <button type="button" class="chip sq" data-a="pause">${paused ? '口袋開好了，開始撥存' : '暫停撥存'}</button></div></div>`;
+}
+
+/* ───────── Essen：進階記帳 ───────── */
+const ADV = [['settleIn', '錢進帳', '現金存銀行、LINE Pay、官網撥款'], ['settleOwe', '個人帳戶和店的往來', '轉回店裡、代墊歸還'], ['settlePay', '付款與繳稅', '代售品牌貨款、營業稅'], ['transfer', '其他轉帳', '期初資金、業主投入、薪資'], ['bills', '繳費', '從固定支出預留付'], ['monthly', '月初撥存', '']];
+const FULL = [['sale', '商品銷售（含官網）'], ['course', '課程收款'], ['expense', '支出（含個人）'], ['consign', '代售'], ['collab', '品牌合作']];
+function advNote(){
+  const t = S.F.transfer && S.F.transfer.category;
+  return ({ settleIn: 'Esme 用「收到錢 › 便利配或藍新撥款進來」記，系統會自動換成這裡的紀錄。這裡留給一次記好幾筆、或修正用。',
+    settleOwe: '平常從「月底結算」按「記一筆代墊歸還」，金額會自動帶好。',
+    settlePay: '繳營業稅平常用「付錢出去 › 繳營業稅」；代售貨款從「月底結算」記。',
+    bills: '平常用「付錢出去 › 房租、水電、網路帳單」或「本月例行 › 去記」。',
+    monthly: S.B.paused ? '目前暫停中（要等公司戶和口袋開好）。可以在「月底結算」重新開啟。' : '',
+    transfer: t === '期初資金' ? '開帳前的舊款，平常在「每週對帳」把待確認歸類成期初資金。這裡用在補記開帳時帳戶裡原本就有的錢（例：LINE Pay、個人現金）。' : t === '帳戶間轉帳' ? '現金存銀行、LINE Pay 撥款用「錢進帳」比較快。這裡給其他搬錢（例：口袋之間調度）。' : '' })[S.action] || '';
+}
+function advPage(){
+  const paused = S.B.paused;
+  const t = ([id, l, s]) => `<button type="button" class="tile ${S.anchor === id ? 'on' : ''}" data-a="aopen" data-v="${id}"><b>${l}</b><span>${id === 'monthly' ? (paused ? '暫停中' : '每月 1–5 號') : s}</span></button>`;
+  let rows = '';
+  for (let i = 0; i < ADV.length; i += 2) {
+    rows += `<div class="grid g2">${t(ADV[i])}${t(ADV[i + 1])}</div>`;
+    if (S.action && (S.anchor === ADV[i][0] || S.anchor === ADV[i + 1][0])) rows += formCard();
+  }
+  const fullOn = FULL.some((x) => x[0] === S.anchor);
+  return `<div class="card">${back('')}<h3>進階記帳</h3><p class="lab" style="margin:0">原本「店內資金」的卡片，修帳或特殊情況時用。每張上面會說平常改從哪裡記。</p>${rows}
+    <p class="lab" style="margin:6px 0 0">完整表單（有官網訂單、個人支出、代售等全部選項）</p>
+    <div class="chips">${FULL.map(([id, l]) => chip(S.anchor === id, 'aopen', id, l, 'sq')).join('')}</div></div>${fullOn && S.action ? formCard() : ''}`;
+}
+
 /* ───────── 送出 ───────── */
 function payload(){
   const a = S.action, F = S.F;
-  if (a === 'sale') { const f = F.sale; const ps = promoState(f); return { action: 'sale', date: f.date, note: f.note, channel: f.channel, account: f.account, coupons: f.coupons || 0, lines: f.cart, gifts: ps ? ps.gifts : [], promo: ps && ps.gifts.length ? ps.pr.name : '' }; }
+  if (a === 'sale') { const f = F.sale; const ps = promoState(f); return { action: 'sale', date: f.date, note: f.note, channel: f.channel, account: f.account, coupons: f.coupons || 0, lines: f.cart, gifts: ps ? ps.gifts : [], promo: ps && ps.gifts.length ? ps.pr.name : '', consign: f.channel === '店內' ? f.bc.map((x) => ({ brand: x.brand, price: x.price })) : [] }; }
+  if (a === 'gweb') { const f = F.gweb, it = webItem(f.src), amt = num(f.amount), old = showOld() ? f.old : '沒有';
+    if (old === '全部都是') return { action: 'transfer', date: f.date, note: f.note, category: '期初資金', to: it.to, amount: amt };
+    if (old === '不確定') return { action: 'pending', date: f.date, note: f.note, dir: 'in', amount: amt, account: it.to, desc: (f.src === 'cvs' ? '便利配' : '線上付款') + '撥款，不確定有沒有開帳前的訂單' };
+    const oa = old === '有一部分' ? num(f.oldAmt) : 0;
+    return { action: 'transfers', date: f.date, items: [{ key: it.key, amount: amt - oa, opening: oa }] }; }
+  if (a === 'gpend') { const f = F.gpend; return { action: 'pending', date: f.date, note: f.note, dir: f.dir, amount: f.amount, account: f.account, desc: f.desc }; }
+  if (a === 'gbrand') { const f = F.gbrand; return { action: 'transfer', date: f.date, note: f.note, category: '代售貨款支付', from: f.account, amount: f.amount, party: f.brand }; }
   if (a === 'course') { const f = F.course; const auto = coursePrice(S.B.courses.find((x) => x.name === f.course), f.people); return { action: 'course', date: f.date, note: f.note, course: f.course, people: f.people, classDate: f.classDate, amount: f.amount === '' ? auto : f.amount, account: f.account, party: f.party }; }
   if (a === 'expense' && F.expense.scope === '店務' && F.expense.category === '營業稅') { const f = F.expense; return { action: 'transfer', date: f.date, note: f.note, category: '營業稅繳納', from: f.account, to: '', amount: f.amount }; }
   if (a === 'expense') { const f = F.expense; return { action: 'expense', date: f.date, note: f.note, category: f.category, amount: f.amount, account: f.account, party: f.party }; }
@@ -572,22 +881,38 @@ function payload(){
   if (a === 'adjust') { const f = F.adjust; return { action: 'adjust', date: f.date, note: f.note, loc: f.loc, state: f.state, lines: Object.keys(f.q).map((id) => ({ id, qty: f.q[id] })) }; }
   if (a === 'transfer') { const f = F.transfer; return { action: 'transfer', date: f.date, note: f.note, category: f.category, from: f.from, to: f.to, amount: f.amount }; }
 }
+function validate(){
+  const a = S.action, F = S.F;
+  if (a === 'expense' && !F.expense.category) return '請先選類別';
+  if (a === 'gweb') { const f = F.gweb; if (!f.src) return '請選誰撥的款'; if (!(num(f.amount) > 0)) return '請填金額';
+    if (showOld() && !f.old) return '請回答有沒有開帳前的訂單';
+    if (showOld() && f.old === '有一部分' && !(num(f.oldAmt) > 0 && num(f.oldAmt) < num(f.amount))) return '開帳前訂單的金額要大於 0、小於整筆'; }
+  if (a === 'gpend') { const f = F.gpend; if (!(num(f.amount) > 0)) return '請填金額'; if (!String(f.desc).trim()) return '請寫一句這是什麼錢'; if (!f.account) return '請選帳戶'; }
+  if (a === 'gbrand') { const f = F.gbrand; if (!f.brand) return '請選品牌'; if (!(num(f.amount) > 0)) return '請填金額'; if (!f.account) return '請選帳戶'; }
+  return '';
+}
+// 送出一筆；遇到「疑似重複」先問，回傳 null＝使用者取消
+async function send(tx){
+  try { return await api({ action: 'add', tx }); }
+  catch (e) { if (String(e.message).indexOf('DUP|') !== 0) throw e;
+    if (!confirm(e.message.slice(4))) return null;
+    return await api({ action: 'add', tx: Object.assign({}, tx, { force: true }) }); }
+}
 async function save(){
   if (S.busy) return;
+  const err = validate(); if (err) { toast(err); return; }
   S.busy = true; render();
   try {
     const tx = payload();
-    const wasEdit = !!S.editing;
+    const wasEdit = !!S.editing, ctx = S.ctx;
     if (wasEdit) tx.replaceId = S.editing.id;
-    let r;
-    try { r = await api({ action: 'add', tx }); }
-    catch (e) { if (String(e.message).indexOf('DUP|') !== 0) throw e;
-      if (!confirm(e.message.slice(4))) { S.busy = false; render(); return; }
-      r = await api({ action: 'add', tx: Object.assign({}, tx, { force: true }) }); }
+    const r = await send(tx);
+    if (!r) { S.busy = false; render(); return; }
     const back = tx.date && tx.date < new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10) ? '（日期 ' + tx.date.slice(5).replace('-', '/') + '，明細在那天底下）' : '';
-    toast((wasEdit ? '已修改' : '已記下' + (r.result.count > 1 ? ' ' + r.result.count + ' 筆' : '')) + back);
-    if (wasEdit) { S.editing = null; S.action = ''; S.tab = 'list'; S.openEntry = ''; }
+    toast(tx.action === 'pending' ? '已記下，Essen 對帳時會看到這筆' : ctx === 'cls' ? '已歸類' : (wasEdit ? '已修改' : '已記下' + (r.result.count > 1 ? ' ' + r.result.count + ' 筆' : '')) + back);
     const keep = S.action;
+    if (ctx) { S.editing = null; S.action = ''; S.anchor = ''; S.cls = null; S.ctx = ''; if (ctx === 'g') { S.page = ''; window.scrollTo(0, 0); } S.issuesMonth = ''; }
+    else if (wasEdit) { S.editing = null; S.action = ''; S.tab = 'list'; S.openEntry = ''; }
     await boot(true);
     initForms(); if (MGROUP[keep]) S.F.monthly = null;
     S.items = null; S.summary = null;
@@ -652,6 +977,7 @@ function entryText(t){
     case '寄售收款': return { title: t.party + ' 收款', sub: t.rec + ' 的款項・' + t.to, amt: '+' + money(t.amount), c: 'in-c' };
     case '分裝': return { title: t.party + ' 分裝', sub: '拆 ' + (d.opens || []).reduce((a, o) => a + o.bad + o.good, 0) + ' 瓶・做出 ' + lines(d.made), amt: '庫存', c: '' };
     case '公關出庫': return { title: '贈品・公關品：' + t.party, sub: lines(d.lines), amt: '庫存', c: '' };
+    case '待確認': return { title: '待確認：' + t.party, sub: (d.dir === 'out' ? '從 ' + t.from : '進 ' + t.to) + '・等 Essen 歸類', amt: (d.dir === 'out' ? '−' : '+') + money(t.amount), c: '' };
     case '庫存調整': return { title: '庫存調整・' + t.party, sub: (d.lines || []).map((l) => l.name + (l.qty > 0 ? '+' : '') + l.qty).join('、'), amt: '庫存', c: '' };
     default: return { title: t.party || t.category, sub: t.flow === '轉帳' ? t.from + ' → ' + t.to : (t.from || t.to), amt: (t.flow === '支出' || t.flow === '付款' ? '−' : t.flow === '收入' ? '+' : '') + money(t.amount), c: t.flow === '支出' || t.flow === '付款' ? 'out-c' : t.flow === '收入' ? 'in-c' : '' };
   }
@@ -808,10 +1134,6 @@ function itemCard(s){
 async function loadSummary(){ try { const d = await api({ action: 'summary', month: S.month }); S.summary = d.summary; S.issues = d.issues || []; } catch(e){ toast(e.message); S.summary = { month: S.month, error: true }; } render(); }
 
 /* ───────── 設定 ───────── */
-function homeOrder(){
-  if (!S.home) { try { S.home = localStorage.getItem('ledger.home') || ''; } catch(e){} }
-  return S.home || (S.user === 'Essen' ? 'goods' : 'money');
-}
 function renderSet(){
   return `<div class="sec"><div class="card"><h3>連線設定</h3>
     ${field('cfg.url', 'API 網址（Apps Script 部署後 /exec 結尾的網址）', `<input id="cfg.url" type="url" value="${esc(S.url)}" placeholder="https://script.google.com/macros/s/…/exec">`)}
@@ -820,8 +1142,8 @@ function renderSet(){
     <button class="save" data-a="login">儲存並連線</button>
     <button class="ghost" data-a="logout">清除這台裝置的設定</button>
     <p class="lab">這些資料只存在這台裝置的瀏覽器裡，不會出現在 GitHub 上。</p></div>
-    <div class="card"><h3>記一筆的首頁排列</h3><p class="lab" style="margin:0">依你負責的工作，把最常用的區塊放最上面（只影響這台裝置）。</p>
-      <div class="grid g2">${chip(homeOrder() === 'money', 'home', 'money', '<b>收支優先</b><small>常用、店內資金在上面</small>', 'sq two')}${chip(homeOrder() === 'goods', 'home', 'goods', '<b>貨品優先</b><small>寄售、分裝、庫存在上面</small>', 'sq two')}</div></div></div>`;
+    ${S.B ? `<div class="card"><h3>首頁版本</h3><p class="lab" style="margin:0">預設：Essen 用 Essen 版，其他人用 Esme 版。只影響這台裝置。</p>
+      <div class="grid g2">${chip(role() === 'esme', 'role', 'esme', '<b>Esme 版</b><small>收到錢、付錢出去兩個大按鈕</small>', 'sq two')}${chip(role() === 'essen', 'role', 'essen', '<b>Essen 版</b><small>貨品、記帳、管理（對帳、結算）</small>', 'sq two')}</div></div>` : ''}</div>`;
 }
 
 /* ───────── 主繪製 ───────── */
@@ -829,7 +1151,9 @@ function render(){
   const app = $('#app');
   const ae = document.activeElement; const fid = ae && ae.id && ae.type !== 'date' ? ae.id : ''; const sel = fid && ae.selectionStart !== undefined ? [ae.selectionStart, ae.selectionEnd] : null;
   $('#who').textContent = S.B ? '記帳人：' + S.user : '';
-  $('#nav').innerHTML = [['add', '記一筆'], ['list', '明細'], ['stock', '庫存'], ['report', '月報']].map(([k, l]) => `<button class="${S.tab === k ? 'on' : ''}" data-a="tab" data-v="${k}"><i></i>${l}</button>`).join('');
+  const tabs = [['add', '記一筆'], ['list', '明細'], ['stock', '庫存'], ['report', '月報']].filter((x) => !S.B || role() === 'essen' || x[0] !== 'stock');
+  $('#nav').style.gridTemplateColumns = 'repeat(' + tabs.length + ',1fr)';
+  $('#nav').innerHTML = tabs.map(([k, l]) => `<button class="${S.tab === k ? 'on' : ''}" data-a="tab" data-v="${k}"><i></i>${l}</button>`).join('');
   if (!S.B || S.tab === 'set') app.innerHTML = renderSet();
   else if (S.tab === 'add') app.innerHTML = renderAdd();
   else if (S.tab === 'list') app.innerHTML = renderList();
@@ -843,12 +1167,15 @@ function setPath(path, val){
   const [form, key] = path.split('.');
   if (form === 'm') { S.F.monthly.amounts[key] = val === '' ? '' : Number(val); return; }
   if (form === 'monthly') { S.F.monthly[key] = val; return; }
+  if (form === 'cls') { S.cls[key] = val; return; }
   const f = S.F[form]; if (!f) return;
   if (['people'].indexOf(key) > -1) val = Number(val);
   if (form === 'sale' && key === 'cat') { f.cat = val; return; }
-  if (form === 'sale' && key === 'channel') { f.channel = val; f.account = val === '官網' ? '線上付款待入帳' : '店內現金'; return; }
+  if (form === 'sale' && key === 'channel') { f.channel = val; f.account = val === '官網' ? '線上付款待入帳' : '店內現金'; if (val === '官網' && f.cat === '寄賣品牌') f.cat = '正裝'; return; }
+  if (form === 'expense' && key === 'oth') { f.oth = true; if (['全家', '萊爾富', '郵局', '黑貓'].indexOf(f.party) > -1) f.party = ''; return; }
   if (form === 'expense' && key === 'category') { f.category = val; if (f.scope === '店務') {
-      if (val === '營業稅') f.account = '稅金預留'; else if (FIXED_BILLS.indexOf(val) > -1) f.account = '固定支出預留';
+      if (S.B.paused) { if (['稅金預留', '固定支出預留'].indexOf(f.account) > -1) f.account = S.B.mainAcc; }
+      else if (val === '營業稅') f.account = '稅金預留'; else if (FIXED_BILLS.indexOf(val) > -1) f.account = '固定支出預留';
       else if (['稅金預留', '固定支出預留'].indexOf(f.account) > -1) f.account = '公司營運戶'; } return; }
   if (form === 'expense' && key === 'scope') { f.scope = val; f.category = val === '店務' ? '運費' : '餐飲'; f.account = val === '店務' ? '公司營運戶' : '個人帳戶'; return; }
   if (form === 'course' && (key === 'course' || key === 'people')) f.amount = '';
@@ -858,7 +1185,33 @@ function setPath(path, val){
 const bump = (obj, id, d) => { obj[id] = Math.max(0, (obj[id] || 0) + d); if (!obj[id]) delete obj[id]; };
 const H = {
   tab(v){ S.tab = v; if (v === 'list') S.items = null; if (v === 'report') S.summary = null; render(); },
-  act(v){ if (S.editing && v !== S.action) { S.editing = null; initForms(); toast('已取消修改'); } S.action = S.action === v ? '' : v; if (MGROUP[v] && !S.F.monthly) initMonthly(); render(); },
+  act(v){ if (S.editing && v !== S.action) { S.editing = null; initForms(); toast('已取消修改'); } if (S.ctx) { S.ctx = ''; S.anchor = ''; S.action = ''; initForms(); } S.action = S.action === v ? '' : v; if (MGROUP[v] && !S.F.monthly) initMonthly(); render(); },
+  pg(v){ if (S.ctx) { S.editing = null; S.ctx = ''; } S.page = v; S.action = ''; S.anchor = ''; S.cls = null; render(); window.scrollTo(0, 0); },
+  gstart(v){ gstart(v); render(); window.scrollTo(0, 0); },
+  saleAddB(){ const f = S.F.sale; if (!f.brand) return toast('先選品牌'); if (!(num(f.bp) > 0)) return toast('請填售價'); f.bc.push({ brand: f.brand, price: Math.round(num(f.bp)) }); f.bp = ''; render(); },
+  saleDelB(i){ S.F.sale.bc.splice(+i, 1); render(); },
+  clsOpen(id){ if (S.ctx === 'cls') { S.editing = null; S.action = ''; } S.ctx = ''; S.cls = { id, pick: '', src: 'cvs', old: '' }; render(); },
+  clsCancel(){ S.cls = null; S.editing = null; S.action = ''; S.ctx = ''; render(); },
+  clsPick(k){ const p = S.B.pending.find((x) => x.id === S.cls.id); if (!p) return; if (CLS_FORM.indexOf(k) > -1) { clsForm(p, k); render(); return; } S.cls.pick = k; render(); },
+  async clsOk(){
+    const c = S.cls, p = c && S.B.pending.find((x) => x.id === c.id); if (!p || S.busy) return;
+    if (!c.pick) return toast('先選這筆應該是什麼');
+    let tx;
+    if (c.pick === 'opening') tx = { action: 'transfer', category: '期初資金', to: p.acc, amount: p.amount, date: p.date, note: p.desc };
+    else if (['web', 'cvs', 'split'].indexOf(c.pick) > -1) { const it = webItem(c.pick === 'split' ? c.src : c.pick); const oa = c.pick === 'split' ? num(c.old) : 0;
+      if (c.pick === 'split' && !(oa > 0 && oa < p.amount)) return toast('開帳前的金額要大於 0、小於整筆');
+      tx = { action: 'transfers', date: p.date, items: [{ key: it.key, amount: p.amount - oa, opening: oa, to: p.acc }] }; }
+    else tx = { action: 'expense', category: c.pick, amount: p.amount, account: p.acc, date: p.date, note: p.desc };
+    tx.replaceId = p.id;
+    S.busy = true; render();
+    try { await send(tx); toast('已歸類'); S.cls = null; S.issuesMonth = ''; await boot(true); initForms(); } catch(e){ toast(e.message); }
+    S.busy = false; render();
+  },
+  rgo(i){ const x = (S.B.routine || [])[+i]; if (!x) return; goTask(x, 'r' + i); render(); },
+  mgo(v){ const c = S.B.close; goTask(v === 'owe' ? { go: 'owe' } : v === 'pay' ? { go: 'pay' } : { go: 'tax', amount: Math.max(0, c.vat.prevDue - c.vat.paidThisMonth) }, v); render(); },
+  aopen(id){ if (S.anchor === id) { S.anchor = ''; S.action = ''; S.ctx = ''; render(); return; } initForms(); S.editing = null; S.ctx = 'pg'; S.gcats = null; S.anchor = id; S.action = id; if (MGROUP[id]) initMonthly(); render(); },
+  async pause(){ const v = !S.B.paused; try { await api({ action: 'setPaused', paused: v }); await boot(true); toast(v ? '已暫停月初撥存' : '已開始月初撥存，本月例行會出現「月初撥存」'); } catch(e){ toast(e.message); } render(); },
+  role(v){ S.role = v; LS.set('ledger.role', v); S.page = ''; S.action = ''; S.ctx = ''; render(); },
   set(v){ const i = v.indexOf('|'); setPath(v.slice(0, i), v.slice(i + 1)); render(); },
   // 用位置選，不用名稱比對：名稱裡有隱藏換行時也不會選不到
   pickIdx(v){ const [path, list, i] = v.split('|'); const item = (S.B[list] || [])[+i]; if (item) setPath(path, item.name); render(); },
@@ -882,7 +1235,6 @@ const H = {
   async ack(i){ const x = (S.issues || [])[+i]; if (!x) return; const done = !x.done; x.done = done; x.by = done ? S.user : ''; render();
     try { await api({ action: 'ack', key: x.key, done, title: x.title }); } catch(e){ x.done = !done; toast(e.message); render(); } },
   ackOpen(){ S.ackOpen = !S.ackOpen; render(); },
-  home(v){ S.home = v; try { localStorage.setItem('ledger.home', v); } catch(e){} render(); },
   sv0(){ S.showVoid = !S.showVoid; render(); },
   lm(d){ S.listMonth = addMonth(S.listMonth, +d); S.items = null; render(); },
   rm(d){ S.month = addMonth(S.month, +d); S.summary = null; render(); },
@@ -895,6 +1247,7 @@ const H = {
     const t = (S.items || []).find((x) => x.id === id); if (!t) return;
     if (!prefill(t)) { toast('這類紀錄請作廢後重記'); return; }
     S.editing = { id: t.id, title: entryText(t).title, date: t.date };
+    S.ctx = ''; S.anchor = ''; S.page = '';
     S.tab = 'add'; render(); window.scrollTo(0, 0);
   },
   cancelEdit(){ S.editing = null; S.action = ''; initForms(); render(); },
@@ -913,7 +1266,7 @@ const H = {
 };
 document.addEventListener('click', (e) => { const el = e.target.closest('[data-a]'); if (!el) return; const fn = H[el.dataset.a]; if (fn) fn(el.dataset.v); });
 // 打字時只在需要即時試算的欄位重畫，避免手機鍵盤跳動
-const LIVE = (id) => id.indexOf('m.') === 0 || id === 'consign.price' || id === 'recon.amount' || id === 'collab.people' || id === 'collab.per';
+const LIVE = (id) => id.indexOf('m.') === 0 || ['consign.price', 'recon.amount', 'collab.people', 'collab.per', 'gweb.amount', 'gweb.oldAmt', 'cls.old'].indexOf(id) > -1;
 // 日期欄位不重畫整頁：iPhone 的日期選擇器開著時重畫，會讓選擇器失效、改不了日期
 function onDate(el){ setPath(el.dataset.in, el.value); const n = document.getElementById('course-note'); if (n && S.F.course) n.textContent = courseNote(S.F.course); const c = document.getElementById('collab-note'); if (c && S.F.collab) c.textContent = collabNote(S.F.collab); }
 document.addEventListener('input', (e) => { const el = e.target; if (!el.dataset || !el.dataset.in) return; if (el.type === 'date') return onDate(el); setPath(el.dataset.in, el.value); if (LIVE(el.dataset.in)) render(); });
