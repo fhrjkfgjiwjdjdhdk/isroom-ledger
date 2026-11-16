@@ -568,7 +568,8 @@ async function save(){
     const wasEdit = !!S.editing;
     if (wasEdit) tx.replaceId = S.editing.id;
     const r = await api({ action: 'add', tx });
-    toast(wasEdit ? '已修改' : '已記下' + (r.result.count > 1 ? ' ' + r.result.count + ' 筆' : ''));
+    const back = tx.date && tx.date < new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10) ? '（日期 ' + tx.date.slice(5).replace('-', '/') + '，明細在那天底下）' : '';
+    toast((wasEdit ? '已修改' : '已記下' + (r.result.count > 1 ? ' ' + r.result.count + ' 筆' : '')) + back);
     if (wasEdit) { S.editing = null; S.action = ''; S.tab = 'list'; S.openEntry = ''; }
     const keep = S.action;
     await boot(true);
@@ -644,11 +645,16 @@ function renderList(){
   const nav = `<div style="display:flex;justify-content:space-between;align-items:center"><h2>明細</h2><div class="mon"><button data-a="lm" data-v="-1" aria-label="上個月">‹</button><span>${m.replace('-', ' / ')}</span><button data-a="lm" data-v="1" aria-label="下個月">›</button></div></div>`;
   if (!S.items) { loadList(); return nav + '<div class="empty">讀取中…</div>'; }
   if (!S.items.length) return nav + '<div class="empty">這個月還沒有紀錄</div>';
-  let out = nav + '<p class="lab" style="margin:8px 0 0">點一筆可以修改或作廢（貨和錢會一起更正）</p>', day = '';
-  S.items.forEach((t) => {
-    if (t.date !== day) { day = t.date; out += `<div class="day">${day.slice(5).replace('-', '/')}</div>`; }
+  const byRec = S.listOrder === 'rec';
+  let out = nav + `<div class="grid g2" style="margin-top:8px">${chip(!byRec, 'lo', 'date', '依日期', 'sq')}${chip(byRec, 'lo', 'rec', '依記帳先後', 'sq')}</div>
+    <p class="lab" style="margin:8px 0 0">${byRec ? '最新記的在最上面。補記以前日期的帳，在這裡一眼就看得到有沒有記進去。' : '依帳目日期排；補記以前的帳，會出現在那天底下，不在最上面。'}點一筆可以修改或作廢（貨和錢會一起更正）</p>`, day = '';
+  const list = byRec ? S.items.slice().sort((a, b) => String(b.created || '').localeCompare(String(a.created || ''))) : S.items;
+  list.forEach((t) => {
+    const g = byRec ? '記於 ' + String(t.created || '').slice(5, 10).replace('-', '/') : t.date.slice(5).replace('-', '/');
+    if (g !== day) { day = g; out += `<div class="day">${g}</div>`; }
+    if (byRec) t = Object.assign({}, t, { _d: '帳目日期 ' + t.date.slice(5).replace('-', '/') });
     const e = entryText(t);
-    out += `<button type="button" class="ent ${t.status === '作廢' ? 'void' : ''}" data-a="openEnt" data-v="${esc(t.id)}"><span class="nm"><b>${esc(e.title)}${t.status === '作廢' ? '<span class="tag">已作廢</span>' : ''}</b><small>${esc(e.sub)}・${esc(t.user)}${t.note ? '・' + esc(t.note) : ''}</small></span><span class="a ${e.c}">${esc(e.amt)}</span></button>`;
+    out += `<button type="button" class="ent ${t.status === '作廢' ? 'void' : ''}" data-a="openEnt" data-v="${esc(t.id)}"><span class="nm"><b>${esc(e.title)}${t.status === '作廢' ? '<span class="tag">已作廢</span>' : ''}</b><small>${t._d ? esc(t._d) + '・' : ''}${esc(e.sub)}・${esc(t.user)}${t.note ? '・' + esc(t.note) : ''}</small></span><span class="a ${e.c}">${esc(e.amt)}</span></button>`;
     if (S.openEntry === t.id && t.status !== '作廢') out += `<div class="grid g2" style="margin:-2px 0 12px">${prefillable(t) ? `<button type="button" class="ghost" data-a="editEnt" data-v="${esc(t.id)}">修改</button>` : `<span></span>`}<button type="button" class="ghost" style="color:var(--out)" data-a="void" data-v="${esc(t.id)}">作廢</button></div>`;
   });
   return out;
@@ -834,6 +840,7 @@ const H = {
   show(v){ const [id, d] = v.split('|'); const o = S.F.split.open[id] || { bad: 0, good: 0 }; S.F.split.show[id] = Math.max(0, Math.min(o.bad + o.good, (S.F.split.show[id] || 0) + +d)); render(); },
   mtick(k){ S.F.monthly.ticks[k] = !S.F.monthly.ticks[k]; render(); },
   save(){ save(); },
+  lo(v){ S.listOrder = v; render(); },
   lm(d){ S.listMonth = addMonth(S.listMonth, +d); S.items = null; render(); },
   rm(d){ S.month = addMonth(S.month, +d); S.summary = null; render(); },
   sv(v){ S.stockView = +v; render(); },
