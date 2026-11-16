@@ -388,7 +388,7 @@ const FORMS = {
   collab(){
     const f = S.F.collab;
     return `<h3>品牌合作</h3>
-      <div class="chips">${['創業顧問', '活動策劃', '活動收入', '活動企劃費', '報名抽成'].map((k) => chip(f.kind === k, 'set', 'collab.kind|' + k, k, 'sq')).join('')}</div>
+      <div class="chips">${['創業顧問', '活動企劃費', '報名抽成'].concat(['活動策劃', '活動收入'].indexOf(f.kind) > -1 ? [f.kind] : []).map((k) => chip(f.kind === k, 'set', 'collab.kind|' + k, k, 'sq')).join('')}</div>
       <p class="lab" style="margin:0">${({ '創業顧問': '顧問服務費', '活動策劃': '事前收的活動策劃費，收入算在活動那個月', '活動收入': '活動相關的其他收入', '活動企劃費': '做企劃當天收的企劃費，收入算在收款那個月', '報名抽成': '活動當天依報名人數抽成' })[f.kind] || ''}</p>
       ${field('collab.party', '合作對象', inp('collab.party', 'text', f.party, '', '例：品牌或活動名稱'))}
       ${f.kind === '活動企劃費' ? '' : field('collab.eventDate', f.kind === '創業顧問' ? '服務日期（選填，不填就算在收款月份）' : SAMEDAY.indexOf(f.kind) > -1 ? '活動日期（選填，不填＝收款日期）' : '活動舉辦日期', inp('collab.eventDate', 'date', f.eventDate))}
