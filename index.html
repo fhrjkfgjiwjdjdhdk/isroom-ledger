@@ -648,7 +648,9 @@ function renderList(){
   const byRec = S.listOrder === 'rec';
   let out = nav + `<div class="grid g2" style="margin-top:8px">${chip(!byRec, 'lo', 'date', '依日期', 'sq')}${chip(byRec, 'lo', 'rec', '依記帳先後', 'sq')}</div>
     <p class="lab" style="margin:8px 0 0">${byRec ? '最新記的在最上面。補記以前日期的帳，在這裡一眼就看得到有沒有記進去。' : '依帳目日期排；補記以前的帳，會出現在那天底下，不在最上面。'}點一筆可以修改或作廢（貨和錢會一起更正）</p>`, day = '';
-  const list = byRec ? S.items.slice().sort((a, b) => String(b.created || '').localeCompare(String(a.created || ''))) : S.items;
+  const voided = S.items.filter((t) => t.status === '作廢').length;
+  const shown = S.showVoid ? S.items : S.items.filter((t) => t.status !== '作廢');
+  const list = byRec ? shown.slice().sort((a, b) => String(b.created || '').localeCompare(String(a.created || ''))) : shown;
   list.forEach((t) => {
     const g = byRec ? '記於 ' + String(t.created || '').slice(5, 10).replace('-', '/') : t.date.slice(5).replace('-', '/');
     if (g !== day) { day = g; out += `<div class="day">${g}</div>`; }
@@ -657,6 +659,7 @@ function renderList(){
     out += `<button type="button" class="ent ${t.status === '作廢' ? 'void' : ''}" data-a="openEnt" data-v="${esc(t.id)}"><span class="nm"><b>${esc(e.title)}${t.status === '作廢' ? '<span class="tag">已作廢</span>' : ''}</b><small>${t._d ? esc(t._d) + '・' : ''}${esc(e.sub)}・${esc(t.user)}${t.note ? '・' + esc(t.note) : ''}</small></span><span class="a ${e.c}">${esc(e.amt)}</span></button>`;
     if (S.openEntry === t.id && t.status !== '作廢') out += `<div class="grid g2" style="margin:-2px 0 12px">${prefillable(t) ? `<button type="button" class="ghost" data-a="editEnt" data-v="${esc(t.id)}">修改</button>` : `<span></span>`}<button type="button" class="ghost" style="color:var(--out)" data-a="void" data-v="${esc(t.id)}">作廢</button></div>`;
   });
+  if (voided) out += `<button type="button" class="ghost" style="margin-top:12px;width:100%;font-size:13px;color:var(--sub)" data-a="sv0">${S.showVoid ? '隱藏' : '顯示'}已作廢的 ${voided} 筆（試算表「帳目」都有保留）</button>`;
   return out;
 }
 async function loadList(){ try { const d = await api({ action: 'list', month: S.listMonth }); S.items = d.items; } catch(e){ S.items = []; toast(e.message); } render(); }
@@ -841,6 +844,7 @@ const H = {
   mtick(k){ S.F.monthly.ticks[k] = !S.F.monthly.ticks[k]; render(); },
   save(){ save(); },
   lo(v){ S.listOrder = v; render(); },
+  sv0(){ S.showVoid = !S.showVoid; render(); },
   lm(d){ S.listMonth = addMonth(S.listMonth, +d); S.items = null; render(); },
   rm(d){ S.month = addMonth(S.month, +d); S.summary = null; render(); },
   sv(v){ S.stockView = +v; render(); },
