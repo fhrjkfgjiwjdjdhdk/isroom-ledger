@@ -140,7 +140,8 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
 .fc{border-color:var(--blue)}
 .pend .card,.card .card{padding:12px}
 .mt.wide{grid-column:1/-1}
-.tag.b{background:#E3EEF8;color:#2F5F8A}.tag.g{background:#E4F2EA;color:#1F7A4D}.bprog{display:flex;flex-wrap:wrap;gap:6px}.ptab2{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto auto;gap:6px 8px;font-size:13px;font-variant-numeric:tabular-nums;align-items:baseline}.ptab2 .h{font-size:11px;color:var(--sub);text-align:right;border-bottom:1px solid var(--line);padding-bottom:4px}.ptab2 .h:first-child{text-align:left}.ptab2 .n{text-align:right;white-space:nowrap}@media(max-width:360px){.ptab2{font-size:12px;gap:6px 6px}.ptab2 .nm b{font-size:12.5px}}.ptab2 .nm{min-width:0;line-height:1.35}.ptab2 .nm.sub{color:var(--sub);font-size:12.5px;padding-left:4px}.ptab2 .nm b{font-size:13.5px}
+.tag.b{background:#E3EEF8;color:#2F5F8A}.tag.g{background:#E4F2EA;color:#1F7A4D}.bprog{display:flex;flex-wrap:wrap;gap:6px}.adjcur{display:flex;align-items:baseline;gap:10px;font-size:14px;flex-wrap:wrap}.adjcur b{font-size:22px;font-variant-numeric:tabular-nums}.adjcur span:last-child{margin-left:auto;font-size:13px}.adjrow{display:grid;grid-template-columns:56px minmax(0,1fr) 56px;gap:8px}.adjb{height:48px;border-radius:12px;border:1px solid var(--line);background:#fff;font-size:26px;line-height:1;color:var(--ink);cursor:pointer}.adjb.on{background:var(--blue);color:#fff;border-color:var(--blue)}.adjin{height:48px;font-size:20px;text-align:center;border:1px solid var(--line);border-radius:12px;width:100%;color:var(--ink);background:#fff;-moz-appearance:textfield;appearance:textfield}.adjin::-webkit-inner-spin-button{-webkit-appearance:none}.adjbox .chip{padding-left:2px;padding-right:2px;white-space:nowrap}.adjbox .g3 .chip{font-size:13px}.adjstep{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:center;font-size:13px;color:var(--sub)}
+.ptab2{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto auto;gap:6px 8px;font-size:13px;font-variant-numeric:tabular-nums;align-items:baseline}.ptab2 .h{font-size:11px;color:var(--sub);text-align:right;border-bottom:1px solid var(--line);padding-bottom:4px}.ptab2 .h:first-child{text-align:left}.ptab2 .n{text-align:right;white-space:nowrap}@media(max-width:360px){.ptab2{font-size:12px;gap:6px 6px}.ptab2 .nm b{font-size:12.5px}}.ptab2 .nm{min-width:0;line-height:1.35}.ptab2 .nm.sub{color:var(--sub);font-size:12.5px;padding-left:4px}.ptab2 .nm b{font-size:13.5px}
 .qtab{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.75fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,.75fr);gap:4px;align-items:center;font-size:12.5px;font-variant-numeric:tabular-nums;background:#F7F9FB;border-radius:10px;padding:8px 6px}.qtab>*{min-width:0}.qtab .h{font-size:10.5px;color:var(--sub);text-align:center;line-height:1.2}.qtab .n{text-align:right}.qtab .nm{font-size:12px;line-height:1.25;word-break:break-all}.pin.cin{width:100%;height:34px;font-size:15px;padding:0 3px;border-radius:8px;text-align:center;-moz-appearance:textfield;appearance:textfield}.cin::-webkit-inner-spin-button,.cin::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .bprice{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:13px;color:var(--sub);font-variant-numeric:tabular-nums}.bprice label{display:flex;align-items:center;gap:6px;color:var(--deep);font-weight:600}.bprice .pfx{color:var(--sub);font-weight:400}.bprice b{color:var(--deep)}
 .brow.mini{padding:8px 0}.brow.mini .bt{align-items:center;flex-wrap:wrap}.brow.mini .bt>span:first-child{flex:1 1 180px;min-width:0}.bbtn .chip{white-space:nowrap}.brow.mini small{font-size:12px}.okrow b{color:#1F7A4D}.okc{color:#1F7A4D;font-weight:700}.vtab.v5{grid-template-columns:1fr auto auto auto auto;gap:3px 10px}.vtab.v5 span.h,.vtab.v5 span{text-align:right}.vtab.v5 span:nth-child(5n+1){text-align:left}.vtab{display:grid;grid-template-columns:1fr auto auto auto;gap:3px 14px;font-size:13px;font-variant-numeric:tabular-nums;background:#F7F9FB;border-radius:10px;padding:8px 10px}.vtab span:not(:nth-child(4n+1)){text-align:right}.vtab .h{color:var(--sub);font-size:11.5px}.paybox{border:1px dashed var(--blue);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;background:#F7FAFD}.bbtn{margin-left:auto;display:flex;gap:6px}.bn .bbtn .chip{margin-left:0}
@@ -973,8 +974,8 @@ const BOM_CARDS = [['共用', '整批的費用，照容量分攤到正裝和針�
 const bomCat = (b) => /原料|香材|酒精|溶劑/.test(b.name) ? '原料香材' : /代工|加工/.test(b.name) ? '外包加工' : /運費|集運|關稅/.test(b.name) ? '收貨運費' : '瓶器包材';
 function prodBom(C){
   const ed = S.bomEdit, od = S.ord;
-  const btns = (r) => `<span class="bbtn">${!r.off && !r.done && od?.row !== r.row ? `<button type="button" class="chip sq on" data-a="ordOpen" data-v="${r.row}">訂購</button>` : ''}${r.ordered && !(S.pay && S.pay.name === r.name) ? `<button type="button" class="chip sq" data-a="payOpen" data-v="${esc(r.name)}">記付款</button>` : ''}<button type="button" class="chip sq" data-a="bomEdit" data-v="${r.row}">編輯</button></span>`;
-  const extras = (r) => `${od && od.row === r.row ? orderPanel(r) : ''}${S.pay && S.pay.name === r.name ? payPanel(r) : ''}`;
+  const btns = (r) => `<span class="bbtn">${!r.off && !r.done && od?.row !== r.row ? `<button type="button" class="chip sq on" data-a="ordOpen" data-v="${r.row}">訂購</button>` : ''}${r.ordered && !(S.pay && S.pay.name === r.name) ? `<button type="button" class="chip sq" data-a="payOpen" data-v="${esc(r.name)}">記付款</button>` : ''}${r.whole || (S.adj && S.adj.row === r.row) ? '' : `<button type="button" class="chip sq" data-a="adjOpen" data-v="${r.row}">＋／−</button>`}<button type="button" class="chip sq" data-a="bomEdit" data-v="${r.row}">編輯</button></span>`;
+  const extras = (r) => `${S.adj && S.adj.row === r.row ? adjPanel(r) : ''}${od && od.row === r.row ? orderPanel(r) : ''}${S.pay && S.pay.name === r.name ? payPanel(r) : ''}`;
   // 數量表：需要、待訂是算出來的；工廠存貨、現有庫存、已訂直接填
   const ci = (row, f, vid, val) => `<input type="number" inputmode="numeric" class="pin cin" data-bf="${row}|${f}|${vid || ''}" value="${val || ''}" placeholder="0">`;
   const qtab = (r) => { const lines = r.vs ? r.vs : [{ id: '', name: '數量', need: r.need, have: r.have, stock: r.stock, ordered: r.ordered, todo: r.todo }];
@@ -1017,6 +1018,18 @@ function pickList(C){
   const whole = C.rows.filter((r) => r.whole && !r.off);
   return grp + (whole.length ? `<div class="card"><h3 style="margin:0">共用（整批）</h3>${whole.map((r) => `<div class="kv"><span>${esc(r.name)}</span><span class="${r.todo ? 'oc' : 'okc'}">${r.todo ? '待訂' : '✓ 已訂'}</span></div>`).join('')}</div>` : '')
     + `<small style="color:var(--sub);line-height:1.6;display:block;padding:0 4px">基本＝實際要用的數量；需要＝基本 ×（1＋備品率）無條件進位；待訂＝需要 − 工廠存貨 − 現有庫存 − 已訂。數字要改請切回「逐項填寫」。</small>`;
+}
+// 加減：工廠存貨、現有庫存用按的增減（收到貨、點貨、用掉），不必自己算總數
+function adjPanel(r){
+  const A = S.adj, lab = { have: '工廠存貨', stock: '現有庫存' };
+  const v = A.vid && r.vs ? r.vs.find((x) => x.id === A.vid) : null, cur = v ? v[A.f] : r[A.f], todo = v ? v.todo : r.todo;
+  return `<div class="paybox adjbox" id="adj-${r.row}"><div class="bt"><b>加減數量</b><button type="button" class="chip sq on" data-a="adjClose">完成</button></div>
+    <div class="grid g2">${chip(A.f === 'have', 'adjF', 'have', '工廠存貨', 'sq')}${chip(A.f === 'stock', 'adjF', 'stock', '現有庫存', 'sq')}</div>
+    ${r.vs ? `<div class="grid g3">${r.vs.map((x) => chip(A.vid === x.id, 'adjV', x.id, esc(x.name), 'sq')).join('')}</div>` : ''}
+    <div class="adjcur"><span>${esc(v ? v.name + '・' : '')}${lab[A.f]}</span><b>${fmt(cur)}</b><span class="${todo ? 'oc' : 'okc'}">${todo ? '待訂 ' + fmt(todo) : '✓ 已足額'}</span></div>
+    <div class="adjrow"><button type="button" class="adjb" data-a="adjDo" data-v="-1" aria-label="減少">−</button><input type="number" inputmode="numeric" class="adjin" data-in="adj.amt" value="${esc(A.amt)}" aria-label="每次加減的數量"><button type="button" class="adjb on" data-a="adjDo" data-v="1" aria-label="增加">＋</button></div>
+    <div class="adjstep"><span>每次</span><div class="grid g4">${[1, 10, 50, 100].map((n) => chip(num(A.amt) === n, 'adjAmt', String(n), String(n), 'sq')).join('')}</div></div>
+    <small style="color:var(--sub)">中間的數字是每按一次加減多少，也可以直接輸入（例如收到 240 個就填 240 再按＋）。按完會自動存。</small></div>`;
 }
 function orderPanel(r){
   const o = S.ord, qty = r.whole ? 1 : r.vs ? r.vs.reduce((t, v) => t + num(o.qv[v.id]), 0) : num(o.q);
@@ -1448,6 +1461,7 @@ function setPath(path, val){
   if (form === 'ord') { if (key.indexOf('o_') === 0) { S.ord.qv[key.slice(2)] = num(val); return; } S.ord[key] = key === 'payNow' ? val === '1' : val; return; }
   if (form === 'tr') { S.tr[key] = val; return; }
   if (form === 'pay') { S.pay[key] = val; return; }
+  if (form === 'adj') { S.adj[key] = val; return; }
   const f = S.F[form]; if (!f) return;
   if (['people'].indexOf(key) > -1) val = Number(val);
   if (form === 'sale' && key === 'cat') { f.cat = val; return; }
@@ -1491,17 +1505,32 @@ const H = {
   mgo(v){ const c = S.B.close; goTask(v === 'owe' ? { go: 'owe' } : v === 'pay' ? { go: 'pay' } : { go: 'tax', amount: Math.max(0, c.vat.prevDue - c.vat.paidThisMonth) }, v); render(); },
   aopen(id){ if (S.anchor === id) { S.anchor = ''; S.action = ''; S.ctx = ''; render(); return; } initForms(); S.editing = null; S.ctx = 'pg'; S.gcats = null; S.anchor = id; S.action = id; if (MGROUP[id]) initMonthly(); render(); },
   async pause(){ const v = !S.B.paused; try { await api({ action: 'setPaused', paused: v }); await boot(true); toast(v ? '已暫停月初撥存' : '已開始月初撥存，本月例行會出現「月初撥存」'); } catch(e){ toast(e.message); } render(); },
-  ptab(v){ S.ptab = v; S.bomEdit = null; S.tEdit = null; S.ord = null; S.pay = null; if (S.anchor === 'buy') { S.anchor = ''; S.action = ''; S.ctx = ''; } render(); },
-  bomEdit(v){ const isNew = String(v).indexOf('new') === 0; const b = isNew ? { name: '', use: v.split(':')[1] || '每瓶正裝', per: 1, have: 0, price: 0, vendor: '', moq: '', status: '', note: '', split: '', hv: {}, ordered: 0, ov: {} } : S.P.bom.find((x) => String(x.row) === String(v)); if (!b) return;
+  ptab(v){ S.ptab = v;S.adj = null;  S.bomEdit = null; S.tEdit = null; S.ord = null; S.pay = null; if (S.anchor === 'buy') { S.anchor = ''; S.action = ''; S.ctx = ''; } render(); },
+  bomEdit(v){ S.adj = null; const isNew = String(v).indexOf('new') === 0; const b = isNew ? { name: '', use: v.split(':')[1] || '每瓶正裝', per: 1, have: 0, price: 0, vendor: '', moq: '', status: '', note: '', split: '', hv: {}, ordered: 0, ov: {} } : S.P.bom.find((x) => String(x.row) === String(v)); if (!b) return;
     S.bomEdit = isNew ? v : +v; S.bd = JSON.parse(JSON.stringify(b)); S.pay = null; S.ord = null; render(); const el = document.getElementById('bom-' + S.bomEdit); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); },
   bomCancel(){ S.bomEdit = null; render(); },
-  bview(v){ S.bview = v; S.bomEdit = null; S.ord = null; S.pay = null; render(); },
+  adjOpen(v){ const b = S.P.bom.find((x) => String(x.row) === v); if (!b) return; S.ord = null; S.pay = null; S.bomEdit = null;
+    const cr = prodCalc().rows.find((r) => r.row === b.row), vs = cr && cr.vs;
+    S.adj = { row: b.row, f: 'stock', vid: vs && vs.length ? vs[0].id : '', amt: (S.adj && S.adj.amt) || 1 }; render();
+    const el = document.getElementById('adj-' + b.row); if (el) el.scrollIntoView({ block: 'nearest' }); },
+  adjClose(){ S.adj = null; render(); },
+  adjF(v){ S.adj.f = v; render(); },
+  adjV(v){ S.adj.vid = v; render(); },
+  adjAmt(v){ S.adj.amt = num(v); render(); },
+  adjDo(sign){ const A = S.adj, b = S.P.bom.find((x) => x.row === A.row); if (!b) return; const d = Math.max(1, Math.round(num(A.amt))) * Number(sign);
+    const map = { have: 'hv', stock: 'sv' };
+    if (A.vid) { b[map[A.f]] = Object.assign({}, b[map[A.f]] || {}); b[map[A.f]][A.vid] = Math.max(0, num(b[map[A.f]][A.vid]) + d); }
+    else b[A.f] = Math.max(0, num(b[A.f]) + d);
+    S.exp = Object.assign({}, S.exp || {}); S.exp[b.row] = true;   // 加到足額也不縮起來，方便繼續按
+    render(); const el = document.getElementById('adj-' + b.row); if (el) el.scrollIntoView({ block: 'nearest' });
+    clearTimeout(S.adjT); S.adjT = setTimeout(() => api({ action: 'prodSet', kind: 'bom', row: b.row, bom: b }).then(() => toast('已存')).catch((er) => toast(er.message)), 700); },
+  bview(v){ S.bview = v; S.adj = null; S.bomEdit = null; S.ord = null; S.pay = null; render(); },
   bomExp(v){ S.exp = Object.assign({}, S.exp || {}); S.exp[v] = !S.exp[v]; render(); const el = document.getElementById('bom-' + v); if (el) el.scrollIntoView({ block: 'nearest' }); },
   async bomSave(){ const b = S.bd; if (!String(b.name || '').trim()) return toast('請填物料名稱');
     S.busy = true; render();
     try { await api({ action: 'prodSet', kind: 'bom', row: String(S.bomEdit).indexOf('new') === 0 ? 0 : S.bomEdit, bom: b });
       S.jump = String(S.bomEdit).indexOf('new') === 0 ? '' : 'bom-' + S.bomEdit; S.bomEdit = null; toast('已存'); S.P = null; await boot(true); } catch(e){ toast(e.message); } S.busy = false; render(); },
-  ordOpen(v){ const r = prodCalc().rows.find((x) => String(x.row) === String(v)); if (!r) return;
+  ordOpen(v){ S.adj = null; const r = prodCalc().rows.find((x) => String(x.row) === String(v)); if (!r) return;
     const qv = {}; (r.vs || []).forEach((x) => { qv[x.id] = x.todo; });
     S.ord = { row: r.row, q: r.todo, qv, payNow: true, amount: '', account: S.B.mainAcc, date: today(), note: '' }; S.bomEdit = null; S.pay = null; render();
     const el = document.getElementById('bom-' + r.row); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); },
