@@ -140,7 +140,8 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
 .fc{border-color:var(--blue)}
 .pend .card,.card .card{padding:12px}
 .mt.wide{grid-column:1/-1}
-.tag.b{background:#E3EEF8;color:#2F5F8A}.tag.g{background:#E4F2EA;color:#1F7A4D}.bprog{display:flex;flex-wrap:wrap;gap:6px}.qtab{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.75fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,.75fr);gap:4px;align-items:center;font-size:12.5px;font-variant-numeric:tabular-nums;background:#F7F9FB;border-radius:10px;padding:8px 6px}.qtab>*{min-width:0}.qtab .h{font-size:10.5px;color:var(--sub);text-align:center;line-height:1.2}.qtab .n{text-align:right}.qtab .nm{font-size:12px;line-height:1.25;word-break:break-all}.pin.cin{width:100%;height:34px;font-size:15px;padding:0 3px;border-radius:8px;text-align:center;-moz-appearance:textfield;appearance:textfield}.cin::-webkit-inner-spin-button,.cin::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.tag.b{background:#E3EEF8;color:#2F5F8A}.tag.g{background:#E4F2EA;color:#1F7A4D}.bprog{display:flex;flex-wrap:wrap;gap:6px}.ptab2{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto auto;gap:6px 8px;font-size:13px;font-variant-numeric:tabular-nums;align-items:baseline}.ptab2 .h{font-size:11px;color:var(--sub);text-align:right;border-bottom:1px solid var(--line);padding-bottom:4px}.ptab2 .h:first-child{text-align:left}.ptab2 .n{text-align:right;white-space:nowrap}@media(max-width:360px){.ptab2{font-size:12px;gap:6px 6px}.ptab2 .nm b{font-size:12.5px}}.ptab2 .nm{min-width:0;line-height:1.35}.ptab2 .nm.sub{color:var(--sub);font-size:12.5px;padding-left:4px}.ptab2 .nm b{font-size:13.5px}
+.qtab{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.75fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,.75fr);gap:4px;align-items:center;font-size:12.5px;font-variant-numeric:tabular-nums;background:#F7F9FB;border-radius:10px;padding:8px 6px}.qtab>*{min-width:0}.qtab .h{font-size:10.5px;color:var(--sub);text-align:center;line-height:1.2}.qtab .n{text-align:right}.qtab .nm{font-size:12px;line-height:1.25;word-break:break-all}.pin.cin{width:100%;height:34px;font-size:15px;padding:0 3px;border-radius:8px;text-align:center;-moz-appearance:textfield;appearance:textfield}.cin::-webkit-inner-spin-button,.cin::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .bprice{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:13px;color:var(--sub);font-variant-numeric:tabular-nums}.bprice label{display:flex;align-items:center;gap:6px;color:var(--deep);font-weight:600}.bprice .pfx{color:var(--sub);font-weight:400}.bprice b{color:var(--deep)}
 .brow.mini{padding:8px 0}.brow.mini .bt{align-items:center;flex-wrap:wrap}.brow.mini .bt>span:first-child{flex:1 1 180px;min-width:0}.bbtn .chip{white-space:nowrap}.brow.mini small{font-size:12px}.okrow b{color:#1F7A4D}.okc{color:#1F7A4D;font-weight:700}.vtab.v5{grid-template-columns:1fr auto auto auto auto;gap:3px 10px}.vtab.v5 span.h,.vtab.v5 span{text-align:right}.vtab.v5 span:nth-child(5n+1){text-align:left}.vtab{display:grid;grid-template-columns:1fr auto auto auto;gap:3px 14px;font-size:13px;font-variant-numeric:tabular-nums;background:#F7F9FB;border-radius:10px;padding:8px 10px}.vtab span:not(:nth-child(4n+1)){text-align:right}.vtab .h{color:var(--sub);font-size:11.5px}.paybox{border:1px dashed var(--blue);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;background:#F7FAFD}.bbtn{margin-left:auto;display:flex;gap:6px}.bn .bbtn .chip{margin-left:0}
 .ptabs{display:flex;gap:6px}.ptabs .chip{flex:1 1 auto;padding:0 6px;white-space:nowrap;min-width:0}
@@ -911,10 +912,12 @@ function prodCalc(){
     : b.split === '系列' ? series.map((g) => ({ id: g.k.id, name: g.k.name.replace('針管組', ''), u: b.use === '每組針管' ? g.sets : b.use === '每支針管' ? g.mem.reduce((t, s) => t + s.vials, 0) : g.mem.reduce((t, s) => t + s.sell, 0) })) : null;
   const rows = P.bom.map((b) => {
     const off = b.status === '不用叫', whole = b.use === '整批';
+    const rate = b.spare === null || b.spare === undefined || b.spare === '' ? extra : num(b.spare);   // 備品率：每項各自設定，沒填用預設
     // 待訂＝需要 − 工廠存貨 − 現有庫存 − 已訂
-    const vs = !whole && b.split ? variants(b).map((v) => { const need = Math.ceil(b.per * v.u * (1 + extra)), have = num((b.hv || {})[v.id]), stock = num((b.sv || {})[v.id]), ordered = num((b.ov || {})[v.id]);
+    const vs = !whole && b.split ? variants(b).map((v) => { const need = Math.ceil(b.per * v.u * (1 + rate)), have = num((b.hv || {})[v.id]), stock = num((b.sv || {})[v.id]), ordered = num((b.ov || {})[v.id]);
       return Object.assign(v, { need, have, stock, ordered, todo: Math.max(0, need - have - stock - ordered) }); }) : null;
-    const need = whole ? 1 : vs ? vs.reduce((t, v) => t + v.need, 0) : Math.ceil(b.per * (units[b.use] || 0) * (1 + extra));
+    const base = whole ? 1 : vs ? vs.reduce((t, v) => t + b.per * v.u, 0) : b.per * (units[b.use] || 0);
+    const need = whole ? 1 : vs ? vs.reduce((t, v) => t + v.need, 0) : Math.ceil(b.per * (units[b.use] || 0) * (1 + rate));
     const have = whole ? 0 : vs ? vs.reduce((t, v) => t + v.have, 0) : b.have;
     const stock = whole ? 0 : vs ? vs.reduce((t, v) => t + v.stock, 0) : (b.stock || 0);
     const ordered = vs ? vs.reduce((t, v) => t + v.ordered, 0) : b.ordered;
@@ -923,7 +926,7 @@ function prodCalc(){
     const buy = whole ? 1 : vs ? vs.reduce((t, v) => t + Math.max(0, v.need - v.have - v.stock), 0) : Math.max(0, need - have - stock);   // 要買的總量（已訂＋待訂）
     const budget = off ? 0 : whole ? b.price : buy * b.price;
     const spent = P.purchases.filter((p) => p.bom === b.name).reduce((t, p) => t + p.amount, 0);
-    return Object.assign({}, b, { need, have, stock, ordered, todo, done, off, whole, vs, buy, budget, spent });
+    return Object.assign({}, b, { rate, base, need, have, stock, ordered, todo, done, off, whole, vs, buy, budget, spent });
   });
   const sum = (use) => rows.filter((r) => r.use === use && !r.off).reduce((t, r) => t + r.price * r.per, 0);
   const batchTotal = rows.filter((r) => r.whole && !r.off).reduce((t, r) => t + r.price, 0);
@@ -984,7 +987,7 @@ function prodBom(C){
     if (r.done && !(S.exp || {})[r.row]) return `<div class="brow mini okrow" id="bom-${r.row}"><div class="bt"><span><b>✓ ${esc(r.name)}</b>　<small>${r.whole ? '已訂' : `已足額：需要 ${fmt(r.need)}・工廠存貨 ${fmt(r.have)}・現有庫存 ${fmt(r.stock)}・已訂 ${fmt(r.ordered)}`}${r.spent ? `・已付 $${fmt(r.spent)}` : ''}</small></span><span class="bbtn">${r.ordered && !(S.pay && S.pay.name === r.name) ? `<button type="button" class="chip sq" data-a="payOpen" data-v="${esc(r.name)}">記付款</button>` : ''}<button type="button" class="chip sq" data-a="bomExp" data-v="${r.row}">展開</button></span></div>${extras(r)}</div>`;
     return `<div class="brow" id="bom-${r.row}">
       <div class="bt"><b>${esc(r.name)}</b>${r.done ? `<span class="bbtn"><span class="tag g">✓ 已足額</span><button type="button" class="chip sq" data-a="bomExp" data-v="${r.row}">收起</button></span>` : `<span class="tag w">${r.whole ? '待訂' : '待訂 ' + fmt(r.todo)}</span>`}</div>
-      <small>${r.use}${r.whole ? '' : ' × ' + r.per}${r.split ? (r.split === '款式' ? '・六款各自' : '・兩個系列各自') : ''}${r.vendor ? '・' + esc(r.vendor) : ''}${r.moq ? '・最低 ' + esc(r.moq) : ''}${r.note ? '<br>' + esc(r.note) : ''}</small>
+      <small>${r.use}${r.whole ? '' : ' × ' + r.per + '・備品 ' + Math.round(r.rate * 100) + '%'}${r.split ? (r.split === '款式' ? '・六款各自' : '・兩個系列各自') : ''}${r.vendor ? '・' + esc(r.vendor) : ''}${r.moq ? '・最低 ' + esc(r.moq) : ''}${r.note ? '<br>' + esc(r.note) : ''}</small>
       ${r.whole ? '' : qtab(r)}
       <div class="bprice"><label>${r.whole ? '整批總價（含運）' : '單價（含運）'}<span class="pfx">$</span>${pIn('bp', String(r.row), r.price || '', 110)}</label>${r.whole ? '' : `<span>× ${fmt(r.buy)} ＝ 預算 <b>$${fmt(r.budget)}</b></span>`}</div>
       <div class="bn">${r.spent ? `<span>已付 <b>$${fmt(r.spent)}</b></span>` : '<span></span>'}${btns(r)}</div>
@@ -996,13 +999,25 @@ function prodBom(C){
       ${sorted.map(row).join('') || '<p class="lab" style="margin:0">沒有項目。</p>'}
       ${ed === 'new:' + def ? bomEditor() : `<button type="button" class="ghost" data-a="bomEdit" data-v="new:${def}">＋ 新增${t}物料</button>`}</div>`; };
   const cnt = (f) => C.rows.filter(f).length;
-  return `<div class="card"><h3 style="margin:0">物料清單</h3>
+  const view = `<div class="grid g2">${chip(S.bview !== 'sum', 'bview', 'list', '逐項填寫', 'sq')}${chip(S.bview === 'sum', 'bview', 'sum', '叫貨總表', 'sq')}</div>`;
+  if (S.bview === 'sum') return `<div class="card"><h3 style="margin:0">物料清單</h3>${view}</div>${pickList(C)}`;
+  return `<div class="card"><h3 style="margin:0">物料清單</h3>${view}
     <div class="bprog"><span class="tag w">待訂 ${cnt((r) => !r.off && !r.done)}</span><span class="tag g">✓ 已足額 ${cnt((r) => r.done)}</span><span class="tag">工廠提供 ${cnt((r) => r.off)}</span></div>
-    <p class="lab" style="margin:0">需要＝每件用量 × 件數 × ${1 + C.extra}（多叫 ${Math.round(C.extra * 100)}%）。<b>待訂＝需要 − 工廠存貨 − 現有庫存 − 已訂</b>，變成 0 就算足額。工廠存貨、現有庫存、已訂、單價都直接在每一項填，填完點別處就會存，會縮成一行排到最下面。件數：正裝 ${fmt(C.bottles)} 瓶、針管組 ${fmt(C.nSets)} 組、針管 ${fmt(C.vials)} 支（含單支 ${fmt(C.singles)}）。</p>
+    <p class="lab" style="margin:0">需要＝每件用量 × 件數 ×（1＋備品率），備品率每項各自設定（在「編輯」裡改）。<b>待訂＝需要 − 工廠存貨 − 現有庫存 − 已訂</b>，變成 0 就算足額。工廠存貨、現有庫存、已訂、單價都直接在每一項填，填完點別處就會存，會縮成一行排到最下面。件數：正裝 ${fmt(C.bottles)} 瓶、針管組 ${fmt(C.nSets)} 組、針管 ${fmt(C.vials)} 支（含單支 ${fmt(C.singles)}）。</p>
     <div class="kv b"><span>物料預算合計</span><span>$${fmt(C.budget)}</span></div></div>
     ${BOM_CARDS.map(card).join('')}`;
 }
 // 訂購：數量（分款的每款分開）＋付款，一次存
+// 叫貨總表：一眼看完每項要多少（含備品）、還要叫多少，方便揀貨和下單
+function pickList(C){
+  const grp = BOM_CARDS.map(([t, , uses]) => { const rs = C.rows.filter((r) => uses.indexOf(r.use) > -1 && !r.whole && !r.off); if (!rs.length) return '';
+    return `<div class="card"><h3 style="margin:0">${t}</h3><div class="ptab2"><span class="h">物料</span><span class="h">基本</span><span class="h">備品</span><span class="h">需要</span><span class="h">待訂</span>
+      ${rs.map((r) => `<span class="nm"><b>${esc(r.name)}</b></span><span class="n">${fmt(r.base)}</span><span class="n">${Math.round(r.rate * 100)}%</span><span class="n"><b>${fmt(r.need)}</b></span><span class="n ${r.todo ? 'oc' : 'okc'}"><b>${r.todo ? fmt(r.todo) : '✓'}</b></span>
+        ${r.vs ? r.vs.map((v) => `<span class="nm sub">└ ${esc(v.name)}</span><span class="n">${fmt(r.per * v.u)}</span><span></span><span class="n">${fmt(v.need)}</span><span class="n ${v.todo ? 'oc' : 'okc'}">${v.todo ? fmt(v.todo) : '✓'}</span>`).join('') : ''}`).join('')}</div></div>`; }).join('');
+  const whole = C.rows.filter((r) => r.whole && !r.off);
+  return grp + (whole.length ? `<div class="card"><h3 style="margin:0">共用（整批）</h3>${whole.map((r) => `<div class="kv"><span>${esc(r.name)}</span><span class="${r.todo ? 'oc' : 'okc'}">${r.todo ? '待訂' : '✓ 已訂'}</span></div>`).join('')}</div>` : '')
+    + `<small style="color:var(--sub);line-height:1.6;display:block;padding:0 4px">基本＝實際要用的數量；需要＝基本 ×（1＋備品率）無條件進位；待訂＝需要 − 工廠存貨 − 現有庫存 − 已訂。數字要改請切回「逐項填寫」。</small>`;
+}
 function orderPanel(r){
   const o = S.ord, qty = r.whole ? 1 : r.vs ? r.vs.reduce((t, v) => t + num(o.qv[v.id]), 0) : num(o.q);
   const amt = r.whole ? r.price : qty * r.price;
@@ -1038,7 +1053,7 @@ function bomEditor(){
       : `<p class="lab" style="margin:0">用在：<b style="color:var(--deep)">${b.use}</b>${b.split ? (b.split === '款式' ? '・六款各自' : '・兩個系列各自') : ''}</p>`}
     <div><p class="lab">要自己叫嗎？</p><div class="grid g2">${chip(b.status !== '不用叫', 'set', 'bd.status|', '要叫', 'sq')}${chip(b.status === '不用叫', 'set', 'bd.status|不用叫', '工廠提供，不用叫', 'sq')}</div></div>
     ${whole ? '' : '<small style="color:var(--sub)">工廠存貨、現有庫存、已訂數量直接在清單上填。</small>'}
-    <div class="grid g2">${whole ? '' : field('bd.per', '每件用量', inp('bd.per', 'number', b.per))}${field('bd.price', whole ? '整批總價（含運）' : '單價（含運）', inp('bd.price', 'number', b.price))}${field('bd.moq', '最低訂購量', inp('bd.moq', 'text', b.moq))}${whole ? `<div><p class="lab">已訂</p><div class="grid g2">${chip(!b.ordered, 'set', 'bd.ordered|0', '還沒', 'sq')}${chip(!!num(b.ordered), 'set', 'bd.ordered|1', '已訂', 'sq')}</div></div>` : ''}</div>
+    <div class="grid g2">${whole ? '' : field('bd.sparePct', '備品率（%）', inp('bd.sparePct', 'number', b.spare === null || b.spare === undefined || b.spare === '' ? '' : Math.round(num(b.spare) * 1000) / 10, '', '預設 ' + Math.round((S.P.params['物料多叫比例'] || 0) * 100)))}${whole ? '' : field('bd.per', '每件用量', inp('bd.per', 'number', b.per))}${field('bd.price', whole ? '整批總價（含運）' : '單價（含運）', inp('bd.price', 'number', b.price))}${field('bd.moq', '最低訂購量', inp('bd.moq', 'text', b.moq))}${whole ? `<div><p class="lab">已訂</p><div class="grid g2">${chip(!b.ordered, 'set', 'bd.ordered|0', '還沒', 'sq')}${chip(!!num(b.ordered), 'set', 'bd.ordered|1', '已訂', 'sq')}</div></div>` : ''}</div>
     ${field('bd.vendor', '廠商', inp('bd.vendor', 'text', b.vendor))}
     ${field('bd.note', '備註', inp('bd.note', 'text', b.note))}
     <div class="grid g2"><button type="button" class="ghost" data-a="bomCancel">取消</button><button type="button" class="save" style="margin:0" data-a="bomSave" ${S.busy ? 'disabled' : ''}>儲存</button></div>
@@ -1428,7 +1443,8 @@ function setPath(path, val){
   if (form === 'monthly') { S.F.monthly[key] = val; return; }
   if (form === 'cls') { S.cls[key] = val; return; }
   if (form === 'bd') { if (key.indexOf('h_') === 0) { S.bd.hv = Object.assign({}, S.bd.hv || {}); S.bd.hv[key.slice(2)] = num(val); return; }
-    if (key.indexOf('o_') === 0) { S.bd.ov = Object.assign({}, S.bd.ov || {}); S.bd.ov[key.slice(2)] = num(val); return; } S.bd[key] = val; return; }
+    if (key.indexOf('o_') === 0) { S.bd.ov = Object.assign({}, S.bd.ov || {}); S.bd.ov[key.slice(2)] = num(val); return; }
+    if (key === 'sparePct') { S.bd.spare = String(val).trim() === '' ? null : num(val) / 100; return; } S.bd[key] = val; return; }
   if (form === 'ord') { if (key.indexOf('o_') === 0) { S.ord.qv[key.slice(2)] = num(val); return; } S.ord[key] = key === 'payNow' ? val === '1' : val; return; }
   if (form === 'tr') { S.tr[key] = val; return; }
   if (form === 'pay') { S.pay[key] = val; return; }
@@ -1479,6 +1495,7 @@ const H = {
   bomEdit(v){ const isNew = String(v).indexOf('new') === 0; const b = isNew ? { name: '', use: v.split(':')[1] || '每瓶正裝', per: 1, have: 0, price: 0, vendor: '', moq: '', status: '', note: '', split: '', hv: {}, ordered: 0, ov: {} } : S.P.bom.find((x) => String(x.row) === String(v)); if (!b) return;
     S.bomEdit = isNew ? v : +v; S.bd = JSON.parse(JSON.stringify(b)); S.pay = null; S.ord = null; render(); const el = document.getElementById('bom-' + S.bomEdit); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); },
   bomCancel(){ S.bomEdit = null; render(); },
+  bview(v){ S.bview = v; S.bomEdit = null; S.ord = null; S.pay = null; render(); },
   bomExp(v){ S.exp = Object.assign({}, S.exp || {}); S.exp[v] = !S.exp[v]; render(); const el = document.getElementById('bom-' + v); if (el) el.scrollIntoView({ block: 'nearest' }); },
   async bomSave(){ const b = S.bd; if (!String(b.name || '').trim()) return toast('請填物料名稱');
     S.busy = true; render();
