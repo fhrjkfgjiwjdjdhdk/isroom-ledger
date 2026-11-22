@@ -82,6 +82,7 @@ input.amt{width:104px;text-align:right;font-variant-numeric:tabular-nums}
 .tag.w{background:var(--warnbg);color:var(--warn)}
 .ent{width:100%;min-height:60px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;margin-bottom:6px}
 .ent .nm{display:flex;flex-direction:column;min-width:0}.ent b{font-size:15px}.ent small{font-size:12px;color:var(--sub)}
+.issgo{align-self:flex-start;margin-top:6px;border:1px solid #E7B97C;background:#FFF6EC;color:var(--warn);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer}.ent.hl{border-color:#E7B97C;box-shadow:0 0 0 2px #FBE7CD}.card.focus{border-color:#E7B97C;background:#FFFBF5}
 .iss{display:grid;grid-template-columns:36px minmax(0,1fr);gap:10px;align-items:start;padding:8px 0;border-top:1px solid #EEF2F5}.iss .tick{width:32px;height:32px}.iss .nm{display:flex;flex-direction:column;gap:2px;min-width:0}.iss small{color:var(--sub);font-size:12px;line-height:1.5}.iss.done b{color:var(--sub);text-decoration:line-through;font-weight:500}
 .hrow{display:grid;grid-template-columns:minmax(0,1fr) 44px 56px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #EEF2F5;font-variant-numeric:tabular-nums}.hrow .nm{display:flex;flex-direction:column;min-width:0}.hrow small{font-size:11px;color:var(--sub);overflow-wrap:anywhere}.hrow>b,.hrow .bal{text-align:right}.hrow .bal{color:var(--sub);font-size:13px}
 .ent .nm{flex:1 1 auto}.ent .a{flex:none;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -795,7 +796,7 @@ const prodOpen = () => (S.B.tasks || []).filter((x) => x.area === '生產' && x.
 let issuesLoading = false;
 async function loadIssues(){
   if (issuesLoading) return; issuesLoading = true;
-  try { const m = curMonth(); const d = await api({ action: 'summary', month: m }); S.issues = d.issues || []; S.issuesMonth = m; if (S.month === m) S.summary = d.summary; }
+  try { const m = curMonth(); const d = await api({ action: 'summary', month: m }); S.issues = d.issues || []; S.issuesFor = m; S.issuesMonth = m; if (S.month === m) S.summary = d.summary; }
   catch(e){ S.issues = []; S.issuesMonth = curMonth(); }
   issuesLoading = false; render();
 }
@@ -1275,7 +1276,8 @@ async function save(){
     const keep = S.action;
     if (tx.batch || S.page === 'prod') S.P = null;
     if (ctx) { S.editing = null; S.action = ''; S.anchor = ''; S.cls = null; S.ctx = ''; if (ctx === 'g') { S.page = ''; window.scrollTo(0, 0); } S.issuesMonth = ''; }
-    else if (wasEdit) { S.editing = null; S.action = ''; S.tab = 'list'; S.openEntry = ''; }
+    else if (wasEdit) { if (S.focus && r.result && r.result.id) S.focus.ids.push(r.result.id);   // 從提醒進來改的，改完回到同一個查對清單
+      S.editing = null; S.action = ''; S.tab = 'list'; S.openEntry = ''; }
     await boot(true);
     initForms(); if (MGROUP[keep]) S.F.monthly = null;
     S.items = null; S.summary = null;
@@ -1349,6 +1351,7 @@ function renderList(){
   const m = S.listMonth;
   const nav = `<div style="display:flex;justify-content:space-between;align-items:center"><h2>明細</h2><div class="mon"><button data-a="lm" data-v="-1" aria-label="上個月">‹</button><span>${m.replace('-', ' / ')}</span><button data-a="lm" data-v="1" aria-label="下個月">›</button></div></div>`;
   if (!S.items) { loadList(); return nav + '<div class="empty">讀取中…</div>'; }
+  if (S.focus) return nav + focusList();
   if (!S.items.length) return nav + '<div class="empty">這個月還沒有紀錄</div>';
   const byRec = S.listOrder === 'rec';
   let out = nav + `<div class="grid g2" style="margin-top:8px">${chip(!byRec, 'lo', 'date', '依日期', 'sq')}${chip(byRec, 'lo', 'rec', '依記帳先後', 'sq')}</div>
@@ -1365,6 +1368,22 @@ function renderList(){
     if (S.openEntry === t.id && t.status !== '作廢') out += `<div class="grid g2" style="margin:-2px 0 12px">${prefillable(t) ? `<button type="button" class="ghost" data-a="editEnt" data-v="${esc(t.id)}">修改</button>` : `<span></span>`}<button type="button" class="ghost" style="color:var(--out)" data-a="void" data-v="${esc(t.id)}">作廢</button></div>`;
   });
   if (voided) out += `<button type="button" class="ghost" style="margin-top:12px;width:100%;font-size:13px;color:var(--sub)" data-a="sv0">${S.showVoid ? '隱藏' : '顯示'}已作廢的 ${voided} 筆（試算表「帳目」都有保留）</button>`;
+  return out;
+}
+// 從提醒點進來：只列出有問題的那幾筆，直接修改或作廢
+function focusList(){
+  const F = S.focus, hit = S.items.filter((t) => F.ids.indexOf(t.id) > -1), live = hit.filter((t) => t.status !== '作廢');
+  const dup = F.kind === 'dup';
+  let out = `<div class="card focus" style="gap:8px;margin-top:8px"><small style="color:var(--warn);font-weight:600">從提醒點進來</small><b>${esc(F.title)}</b>
+    <small style="color:var(--sub);line-height:1.6">${dup ? `對一下銀行或 LINE Pay，實際只進幾筆就留幾筆，多的點開按「作廢」。現在還留 <b>${live.length}</b> 筆。` : '點開那一筆按「修改」補上或更正，存好就會回到這裡。'}</small>
+    <div class="grid g2"><button type="button" class="ghost" data-a="focusBack">← 回${F.from === 'week' ? '每週對帳' : '月報'}</button><button type="button" class="ghost" data-a="focusAll">看這個月全部明細</button></div></div>`;
+  if (!hit.length) return out + '<div class="empty">找不到這幾筆，可能已經被刪改。回上一頁重新整理看看。</div>';
+  hit.slice().sort((a, b) => a.date.localeCompare(b.date) || String(a.created || '').localeCompare(String(b.created || ''))).forEach((t) => {
+    const e = entryText(t), v = t.status === '作廢';
+    out += `<button type="button" class="ent hl ${v ? 'void' : ''}" data-a="openEnt" data-v="${esc(t.id)}"><span class="nm"><b>${esc(e.title)}${v ? '<span class="tag">已作廢</span>' : ''}</b><small>${t.date.slice(5).replace('-', '/')}・記於 ${String(t.created || '').slice(5, 16).replace('-', '/').replace('T', ' ')}・${esc(e.sub)}・${esc(t.user)}${t.note ? '・' + esc(t.note) : ''}</small></span><span class="a ${e.c}">${esc(e.amt)}</span></button>`;
+    if (S.openEntry === t.id && !v) out += `<div class="grid g2" style="margin:-2px 0 12px">${prefillable(t) ? `<button type="button" class="ghost" data-a="editEnt" data-v="${esc(t.id)}">修改</button>` : `<span></span>`}<button type="button" class="ghost" style="color:var(--out)" data-a="void" data-v="${esc(t.id)}">作廢</button></div>`;
+  });
+  if (dup && live.length <= 1) out += `<div class="card" style="gap:6px;background:#EEF7F2;border-color:#BFDCCF"><b class="in-c">只剩 ${live.length} 筆了 ✓</b><small style="color:var(--sub)">回${F.from === 'week' ? '每週對帳' : '月報'}，這項提醒就會消失。</small></div>`;
   return out;
 }
 async function loadList(){ try { const d = await api({ action: 'list', month: S.listMonth }); S.items = d.items; } catch(e){ S.items = []; toast(e.message); } render(); }
@@ -1448,11 +1467,13 @@ function renderReport(){
     ${s.personal ? `<div class="card" style="gap:4px"><p class="lab" style="margin:0">主理人個人支出</p>${kv('合計', s.personal, 'b')}${sub(s.personalBy)}</div>` : ''}
   </div>`;
 }
+// 提醒對應到哪幾筆帳：疑似重複、沒填活動日期、課程收款少於定價（帳戶餘額類的不對應單筆）
+const issIds = (x) => { const k = String(x.key || '').split('|'); return ['dup', 'evt', 'crs'].indexOf(k[0]) > -1 ? k.slice(1).filter(Boolean) : []; };
 function issuesCard(){
   const L = S.issues || []; if (!L.length) return '';
   const open = L.map((x, i) => [x, i]).filter(([x]) => !x.done), done = L.map((x, i) => [x, i]).filter(([x]) => x.done);
   const item = ([x, i]) => `<div class="iss ${x.done ? 'done' : ''}"><button type="button" class="tick ${x.done ? 'on' : ''}" data-a="ack" data-v="${i}" aria-label="${x.done ? '改回未處理' : '標記已處理'}">${x.done ? '✓' : ''}</button>
-    <span class="nm"><b>${esc(x.title)}</b><small>${esc(x.detail)}${x.done && x.by ? '（' + esc(x.by) + ' ' + esc(x.at || '') + ' 標記已處理）' : ''}</small></span></div>`;
+    <span class="nm"><b>${esc(x.title)}</b><small>${esc(x.detail)}${x.done && x.by ? '（' + esc(x.by) + ' ' + esc(x.at || '') + ' 標記已處理）' : ''}</small>${issIds(x).length && !x.done ? `<button type="button" class="issgo" data-a="issGo" data-v="${i}">到明細查對這 ${issIds(x).length} 筆 ›</button>` : ''}</span></div>`;
   return `<div class="card" style="gap:8px;border-color:${open.length ? '#E7B97C' : 'var(--line)'}">
     <div style="display:flex;justify-content:space-between;align-items:baseline"><b>需要處理</b><small style="color:var(--sub)">${open.length ? open.length + ' 項待處理' : '本月沒有待處理的項目'}</small></div>
     ${open.length ? '<small style="color:var(--sub)">系統自動檢查出來的。處理好、或確認沒問題，就點左邊方框勾起來。</small>' : ''}
@@ -1502,7 +1523,7 @@ function itemCard(s){
   return `<div class="card" style="gap:0"><p class="lab" style="margin:0">各品項銷售（件數）</p>${any ? body : '<p class="lab" style="margin:8px 0 0">這個月還沒有銷售紀錄</p>'}
     <p class="lab" style="margin:10px 0 0">寄售依報表的銷售月份計；贈出包含活動贈品與公關出庫，不算在合計裡。金額為原價合計，未扣折扣。</p></div>`;
 }
-async function loadSummary(){ try { const d = await api({ action: 'summary', month: S.month }); S.summary = d.summary; S.issues = d.issues || []; } catch(e){ toast(e.message); S.summary = { month: S.month, error: true }; } render(); }
+async function loadSummary(){ try { const d = await api({ action: 'summary', month: S.month }); S.summary = d.summary; S.issues = d.issues || []; S.issuesFor = S.month; } catch(e){ toast(e.message); S.summary = { month: S.month, error: true }; } render(); }
 
 /* ───────── 設定 ───────── */
 function renderSet(){
@@ -1563,7 +1584,7 @@ function setPath(path, val){
 }
 const bump = (obj, id, d) => { obj[id] = Math.max(0, (obj[id] || 0) + d); if (!obj[id]) delete obj[id]; };
 const H = {
-  tab(v){ S.tab = v; if (v === 'list') S.items = null; if (v === 'report') S.summary = null; render(); },
+  tab(v){ if (v !== 'list') S.focus = null; S.tab = v; if (v === 'list') S.items = null; if (v === 'report') S.summary = null; render(); },
   act(v){ if (S.editing && v !== S.action) { S.editing = null; initForms(); toast('已取消修改'); } if (S.ctx) { S.ctx = ''; S.anchor = ''; S.action = ''; initForms(); } S.action = S.action === v ? '' : v; if (MGROUP[v] && !S.F.monthly) initMonthly(); render(); },
   pg(v){ if (S.ctx) { S.editing = null; S.ctx = ''; } if (v === 'prod' || v === 'order') { S.P = null; S.oOpen = null; S.recNew = null; S.bomEdit = null; S.tEdit = null; S.ord = null; S.pay = null; } S.page = v; S.action = ''; S.anchor = ''; S.cls = null; render(); window.scrollTo(0, 0); },
   gstart(v){ gstart(v); render(); window.scrollTo(0, 0); },
@@ -1696,7 +1717,12 @@ const H = {
     try { await api({ action: 'ack', key: x.key, done, title: x.title }); } catch(e){ x.done = !done; toast(e.message); render(); } },
   ackOpen(){ S.ackOpen = !S.ackOpen; render(); },
   sv0(){ S.showVoid = !S.showVoid; render(); },
-  lm(d){ S.listMonth = addMonth(S.listMonth, +d); S.items = null; render(); },
+  issGo(i){ const x = (S.issues || [])[+i]; if (!x) return; const ids = issIds(x); if (!ids.length) return;
+    S.focus = { ids, title: x.title, kind: String(x.key).split('|')[0], from: S.page === 'week' ? 'week' : 'report', back: { tab: S.tab, page: S.page } };
+    S.listMonth = S.issuesFor || curMonth(); S.items = null; S.openEntry = ids.length === 1 ? ids[0] : ''; S.page = ''; S.tab = 'list'; window.scrollTo(0, 0); render(); },
+  focusBack(){ const b = S.focus ? S.focus.back : { tab: 'report', page: '' }; S.focus = null; S.openEntry = ''; S.tab = b.tab; S.page = b.page; S.summary = null; S.issuesMonth = ''; window.scrollTo(0, 0); render(); },
+  focusAll(){ S.focus = null; S.openEntry = ''; render(); },
+  lm(d){ S.focus = null; S.listMonth = addMonth(S.listMonth, +d); S.items = null; render(); },
   rm(d){ S.month = addMonth(S.month, +d); S.summary = null; render(); },
   sv(v){ S.stockView = +v; render(); },
   hist(v){ if (!v || (S.hist && S.hist.id === v)) { S.hist = null; render(); return; } S.hist = { id: v }; render(); window.scrollTo({ top: 0, behavior: 'smooth' });
