@@ -1322,7 +1322,8 @@ async function save(){
     if (tx.batch || S.page === 'prod') S.P = null;
     if (ctx) { S.editing = null; S.action = ''; S.anchor = ''; S.cls = null; S.ctx = ''; if (ctx === 'g') { S.page = ''; window.scrollTo(0, 0); } S.issuesMonth = ''; }
     else if (wasEdit) { if (S.focus && r.result && r.result.id) S.focus.ids.push(r.result.id);   // 從提醒進來改的，改完回到同一個查對清單
-      S.editing = null; S.action = ''; S.tab = 'list'; S.openEntry = ''; }
+      if (S.mark && r.result && r.result.id) S.mark.id = r.result.id;   // 改完的新紀錄換了 id，停在它的位置
+      S.editing = null; S.action = ''; S.tab = 'list'; S.openEntry = ''; S.items = null; }
     await boot(true);
     initForms(); if (MGROUP[keep]) S.F.monthly = null;
     S.items = null; S.summary = null;
@@ -1431,7 +1432,21 @@ function focusList(){
   if (dup && live.length <= 1) out += `<div class="card" style="gap:6px;background:#EEF7F2;border-color:#BFDCCF"><b class="in-c">只剩 ${live.length} 筆了 ✓</b><small style="color:var(--sub)">回${F.from === 'week' ? '每週對帳' : '月報'}，這項提醒就會消失。</small></div>`;
   return out;
 }
-async function loadList(){ try { const d = await api({ action: 'list', month: S.listMonth }); S.items = d.items; } catch(e){ S.items = []; toast(e.message); } render(); }
+async function loadList(){ try { const d = await api({ action: 'list', month: S.listMonth }); S.items = d.items; } catch(e){ S.items = []; toast(e.message); } render(); listRestore(); }
+// 修改、作廢後重新讀取明細時，停在原本那一筆的位置（不跳回最上面）
+function listMark(id){
+  S.keepY = window.scrollY;
+  const els = [...document.querySelectorAll('[data-a="openEnt"]')], i = els.findIndex((e) => e.dataset.v === id);
+  S.mark = i < 0 ? null : { id, top: els[i].getBoundingClientRect().top, alt: [els[i + 1], els[i - 1]].filter(Boolean).map((e) => e.dataset.v) };
+}
+function listRestore(){
+  const m = S.mark, y = S.keepY; S.mark = null; S.keepY = null; if (!m && (y === null || y === undefined)) return;
+  requestAnimationFrame(() => {
+    const find = (id) => [...document.querySelectorAll('[data-a="openEnt"]')].find((e) => e.dataset.v === id);
+    const el = m ? (find(m.id) || m.alt.map(find).find(Boolean)) : null;
+    if (el) window.scrollBy(0, el.getBoundingClientRect().top - m.top); else if (y !== null && y !== undefined) window.scrollTo(0, y);
+  });
+}
 
 /* ───────── 庫存 ───────── */
 // 各類別的低庫存門檻：正裝 35、針管組 10、單支 5（試算表「設定」可改）
@@ -1629,7 +1644,7 @@ function setPath(path, val){
 }
 const bump = (obj, id, d) => { obj[id] = Math.max(0, (obj[id] || 0) + d); if (!obj[id]) delete obj[id]; };
 const H = {
-  tab(v){ if (v !== 'list') S.focus = null; S.tab = v; if (v === 'list') S.items = null; if (v === 'report') S.summary = null; render(); },
+  tab(v){ if (v !== 'list') S.focus = null; if (!S.editing) { S.mark = null; S.keepY = null; } S.tab = v; if (v === 'list') S.items = null; if (v === 'report') S.summary = null; render(); },
   act(v){ if (S.editing && v !== S.action) { S.editing = null; initForms(); toast('已取消修改'); } if (S.ctx) { S.ctx = ''; S.anchor = ''; S.action = ''; initForms(); } S.action = S.action === v ? '' : v; if (MGROUP[v] && !S.F.monthly) initMonthly(); render(); },
   pg(v){ if (S.ctx) { S.editing = null; S.ctx = ''; } if (v === 'prod' || v === 'order') { S.P = null; S.oOpen = null; S.recNew = null; S.bomEdit = null; S.tEdit = null; S.ord = null; S.pay = null; } S.page = v; S.action = ''; S.anchor = ''; S.cls = null; render(); window.scrollTo(0, 0); },
   gstart(v){ gstart(v); render(); window.scrollTo(0, 0); },
@@ -1779,14 +1794,16 @@ const H = {
     const t = (S.items || []).find((x) => x.id === id); if (!t) return;
     if (!prefill(t)) { toast('這類紀錄請作廢後重記'); return; }
     S.editing = { id: t.id, title: entryText(t).title, date: t.date };
+    if (S.tab === 'list') listMark(t.id);   // 改完回明細時停在這一筆
     S.ctx = ''; S.anchor = ''; S.page = '';
     S.tab = 'add'; render(); window.scrollTo(0, 0);
   },
-  cancelEdit(){ S.editing = null; S.action = ''; initForms(); render(); },
+  cancelEdit(){ const back = !!S.mark; S.editing = null; S.action = ''; initForms(); if (back) { S.tab = 'list'; S.items = null; } render(); },
   async void(id){
     const t = (S.items || []).find((x) => x.id === id); if (!t || t.status === '作廢') return;
     if (!confirm('作廢這筆？\n' + entryText(t).title + '\n\n作廢後會保留在試算表，但不計入報表，庫存也會還原。')) return;
-    try { await api({ action: 'void', id }); toast('已作廢'); S.items = null; S.openEntry = ''; await boot(true); } catch(e){ toast(e.message); }
+    listMark(id);
+    try { await api({ action: 'void', id }); toast('已作廢'); S.items = null; S.openEntry = ''; await boot(true); } catch(e){ toast(e.message); S.mark = null; S.keepY = null; }
     render();
   },
   async login(){
