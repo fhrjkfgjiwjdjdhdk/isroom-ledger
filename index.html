@@ -161,7 +161,7 @@ small.warn{color:var(--out);line-height:1.55;display:block}
 .ptop{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--sub)}.ptop b{color:var(--deep);font-variant-numeric:tabular-nums}
 .prow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #EEF2F5}
 .pn{min-width:0}.pn b{display:block;font-size:15px}.pn small{color:var(--sub);font-size:12.5px;line-height:1.55}
-.pf{display:flex;gap:6px;flex:none}.pf label{display:flex;flex-direction:column;align-items:center;font-size:11.5px;color:var(--sub);gap:2px}
+.pf{display:flex;gap:6px;flex:none;flex-wrap:wrap}.pf label{display:flex;flex-direction:column;align-items:center;font-size:11.5px;color:var(--sub);gap:2px}
 .pin{height:40px;border:1px solid var(--line);border-radius:10px;text-align:right;padding:0 8px;font:inherit;font-size:16px;font-variant-numeric:tabular-nums;background:#fff}
 .brow,.task{border-top:1px solid #EEF2F5;padding:10px 0;display:flex;flex-direction:column;gap:5px}
 .brow small,.task small{color:var(--sub);font-size:12.5px;line-height:1.55}
@@ -311,6 +311,9 @@ const stepper = (a, v, val, sm) => `<div class="step${sm ? ' sm' : ''}"><button 
 const field = (id, label, html) => `<label><p class="lab">${label}</p>${html}</label>`;
 const inp = (id, type, val, cls, ph) => `<input id="${id}" data-in="${id}" type="${type}" ${type === 'number' ? 'inputmode="numeric"' : ''} class="${cls || ''}" value="${esc(val)}" placeholder="${esc(ph || '')}">`;
 const SAMEDAY = ['活動企劃費', '報名抽成'];
+// 開不開發票：決定這筆要不要算 5% 營業稅
+const NOINV = ['活動企劃費', '報名抽成'];
+const invChips = (form, f) => `<div><p class="lab">這筆有沒有開發票</p><div class="grid g2">${chip(f.invoice !== '0', 'set', form + '.invoice|1', '有開發票（含 5% 稅）', 'sq')}${chip(f.invoice === '0', 'set', form + '.invoice|0', '不開發票', 'sq')}</div></div>`;
 const collabNote = (f) => { const ev = f.eventDate ? f.eventDate.slice(0, 7) : ''; const rc = f.date.slice(0, 7);
   if (!ev) return f.kind === '創業顧問' ? '沒填服務日期：算在收款月份 ' + rc + ' 的收入。' : f.kind === '活動企劃費' ? '企劃當天收款：算 ' + rc + ' 的收入。' : SAMEDAY.indexOf(f.kind) > -1 ? '活動當天收的錢：活動日期就是收款日期，算 ' + rc + ' 的收入。' : '請填活動舉辦日期：收入算在活動那個月。';
   return ev === rc ? '算 ' + ev + ' 的收入。' : '收入算在活動那個月（' + ev + '），不是收款月份（' + rc + '）。'; };
@@ -470,7 +473,8 @@ const FORMS = {
       ${field('collab.party', '合作對象', inp('collab.party', 'text', f.party, '', '例：品牌或活動名稱'))}
       ${f.kind === '活動企劃費' ? '' : field('collab.eventDate', f.kind === '創業顧問' ? '服務日期（選填，不填就算在收款月份）' : SAMEDAY.indexOf(f.kind) > -1 ? '活動日期（選填，不填＝收款日期）' : '活動舉辦日期', inp('collab.eventDate', 'date', f.eventDate))}
       ${f.kind === '報名抽成' ? `<div class="grid g2">${field('collab.people', '報名人數', inp('collab.people', 'number', f.people, '', '0'))}${field('collab.per', '每人抽成', inp('collab.per', 'number', f.per, '', '0'))}</div>
-      <div class="kv b"><span>抽成合計</span><span>${money(num(f.people) * num(f.per))}</span></div>` : field('collab.amount', '金額（含稅）', inp('collab.amount', 'number', f.amount, 'big', '0'))}
+      <div class="kv b"><span>抽成合計</span><span>${money(num(f.people) * num(f.per))}</span></div>` : field('collab.amount', NOINV.indexOf(f.kind) > -1 || f.invoice === '0' ? '金額' : '金額（含稅）', inp('collab.amount', 'number', f.amount, 'big', '0'))}
+      ${NOINV.indexOf(f.kind) > -1 ? '<p class="lab" style="margin:0">這類不開發票，不算營業稅。</p>' : invChips('collab', f)}
       <div><p class="lab">收進哪個帳戶</p><div class="chips">${recvAccs().map((a) => chip(f.account === a.name, 'set', 'collab.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>
       <div class="sum"><span class="lab" id="collab-note" style="margin:0">${collabNote(f)}</span></div>
       ${dateNote(f, 'collab', '收款日期（錢進帳戶那天）')}`;
@@ -526,7 +530,7 @@ const FORMS = {
     const comm = gross * (1 - ours);
     const gnote = multi ? `${esc(tg.label)} 合併成一筆對帳。當月合計滿 ${money(st.threshold)}，整筆改為我方 ${Math.round((st.rateAfter || 0) * 10)} 成。件數依報表填在各店，庫存會從各店分別扣；報表沒分店的話，全部填在其中一家也可以。`
       : st.group ? `${esc(st.group)} 各店合併計算門檻，這裡只用本筆試算，月報會用合併金額重算。` : '每個品項分開記，系統會從這家的寄售庫存逐項扣掉。';
-    return head + `<div>${rows}</div>
+    return head + `<div>${rows}</div>${invChips('recon', f)}
       <div class="sum"><div class="kv"><span>銷售總額</span><span>${money(gross)}</span></div><div class="kv"><span>對方抽成（我方 ${Math.round(ours * 10)} 成）</span><span>−${money(comm)}</span></div><div class="kv b in-c"><span>應收金額</span><span>${money(gross - comm)}</span></div><span class="lab" style="margin:0">${gnote}</span></div>
       ${dateNote(f, 'recon')}`;
   },
@@ -983,24 +987,29 @@ function prodCalc(){
   const loss = Math.min(0.9, pa['損耗率'] || 0), extra = pa['物料多叫比例'] || 0;
   const perf = it.filter((x) => x.cat === '正裝'), sets = it.filter((x) => x.cat === '針管組');
   const scent = perf.map((x) => { const total = Q('liters:' + x.id) * 1000, sell = Q('sell:' + x.id), used = sell * ml, remain = total - used;
-    return { x, total, sell, used, remain, vials: remain > 0 ? Math.floor(remain / vml) : 0 }; });
+    const bare = Math.min(sell, Q('bare:' + x.id));   // 裸瓶：不裝外盒（外盒不夠時留著分裝用）
+    return { x, total, sell, bare, boxed: sell - bare, used, remain, vials: remain > 0 ? Math.floor(remain / vml) : 0 }; });
   const series = sets.map((k) => { const mem = scent.filter((s) => s.x.series === k.series);
     const max = mem.length ? Math.min(...mem.map((s) => Math.floor(s.vials / kPer))) : 0, want = Q('set:' + k.id);
     return { k, mem, max, want, sets: Math.min(max, want), vps: mem.length * kPer }; });
   scent.forEach((s) => { const g = series.find((x) => x.k.series === s.x.series); s.inSets = g ? g.sets * kPer : 0; s.singles = s.vials - s.inSets; });
   const bottles = scent.reduce((t, s) => t + s.sell, 0), totalMl = scent.reduce((t, s) => t + s.total, 0);
   const nSets = series.reduce((t, s) => t + s.sets, 0), vials = scent.reduce((t, s) => t + s.vials, 0), singles = scent.reduce((t, s) => t + s.singles, 0);
+  const bare = scent.reduce((t, s) => t + s.bare, 0);
   const units = { '每瓶正裝': bottles, '每組針管': nSets, '每支針管': vials, '整批': 1 };
-  const variants = (b) => b.split === '款式' ? scent.map((s) => ({ id: s.x.id, name: s.x.name, u: b.use === '每瓶正裝' ? s.sell : b.use === '每支針管' ? s.vials : b.use === '每組針管' ? (series.find((g) => g.k.series === s.x.series) || { sets: 0 }).sets : 0 }))
-    : b.split === '系列' ? series.map((g) => ({ id: g.k.id, name: g.k.name.replace('針管組', ''), u: b.use === '每組針管' ? g.sets : b.use === '每支針管' ? g.mem.reduce((t, s) => t + s.vials, 0) : g.mem.reduce((t, s) => t + s.sell, 0) })) : null;
+  // 外盒、外盒貼紙、盒內附的卡片插畫只算裝盒的瓶數；玻璃瓶、噴頭、瓶蓋、瓶身貼紙每瓶都要
+  const boxOnly = (b) => b.use === '每瓶正裝' && /外盒|內附/.test(b.name);
+  const unitsOf = (b) => boxOnly(b) ? bottles - bare : (units[b.use] || 0);
+  const variants = (b) => b.split === '款式' ? scent.map((s) => ({ id: s.x.id, name: s.x.name, u: b.use === '每瓶正裝' ? (boxOnly(b) ? s.boxed : s.sell) : b.use === '每支針管' ? s.vials : b.use === '每組針管' ? (series.find((g) => g.k.series === s.x.series) || { sets: 0 }).sets : 0 }))
+    : b.split === '系列' ? series.map((g) => ({ id: g.k.id, name: g.k.name.replace('針管組', ''), u: b.use === '每組針管' ? g.sets : b.use === '每支針管' ? g.mem.reduce((t, s) => t + s.vials, 0) : g.mem.reduce((t, s) => t + (boxOnly(b) ? s.boxed : s.sell), 0) })) : null;
   const rows = P.bom.map((b) => {
     const off = b.status === '不用叫', whole = b.use === '整批';
     const rate = b.spare === null || b.spare === undefined || b.spare === '' ? extra : num(b.spare);   // 備品率：每項各自設定，沒填用預設
     // 待訂＝需要 − 工廠存貨 − 現有庫存 − 已訂
     const vs = !whole && b.split ? variants(b).map((v) => { const need = Math.ceil(b.per * v.u * (1 + rate)), have = num((b.hv || {})[v.id]), stock = num((b.sv || {})[v.id]), ordered = num((b.ov || {})[v.id]);
       return Object.assign(v, { need, have, stock, ordered, todo: Math.max(0, need - have - stock - ordered) }); }) : null;
-    const base = whole ? 1 : vs ? vs.reduce((t, v) => t + b.per * v.u, 0) : b.per * (units[b.use] || 0);
-    const need = whole ? 1 : vs ? vs.reduce((t, v) => t + v.need, 0) : Math.ceil(b.per * (units[b.use] || 0) * (1 + rate));
+    const base = whole ? 1 : vs ? vs.reduce((t, v) => t + b.per * v.u, 0) : b.per * unitsOf(b);
+    const need = whole ? 1 : vs ? vs.reduce((t, v) => t + v.need, 0) : Math.ceil(b.per * unitsOf(b) * (1 + rate));
     const have = whole ? 0 : vs ? vs.reduce((t, v) => t + v.have, 0) : b.have;
     const stock = whole ? 0 : vs ? vs.reduce((t, v) => t + v.stock, 0) : (b.stock || 0);
     const ordered = vs ? vs.reduce((t, v) => t + v.ordered, 0) : b.ordered;
@@ -1011,7 +1020,7 @@ function prodCalc(){
     const cost = whole ? (recSum || num(b.price)) : num(b.price);
     const budget = off ? 0 : whole ? cost : buy * b.price;
     const spent = P.purchases.filter((p) => p.bom === b.name).reduce((t, p) => t + p.amount, 0);
-    return Object.assign({}, b, { cost, rate, base, need, have, stock, ordered, todo, done, off, whole, vs, buy, budget, spent });
+    return Object.assign({}, b, { boxOnly: boxOnly(b), cost, rate, base, need, have, stock, ordered, todo, done, off, whole, vs, buy, budget, spent });
   });
   const sum = (use) => rows.filter((r) => r.use === use && !r.off).reduce((t, r) => t + r.price * r.per, 0);
   const batchTotal = rows.filter((r) => r.whole && !r.off).reduce((t, r) => t + r.cost, 0);
@@ -1020,7 +1029,7 @@ function prodCalc(){
   const cPerf = (perMl * ml + sum('每瓶正裝')) / keep;
   const cSet = (perMl * vml * vps + sum('每支針管') * vps + sum('每組針管')) / keep;
   const cSingle = (perMl * vml + sum('每支針管')) / keep;
-  return { ml, vml, kPer, loss, extra, scent, series, bottles, totalMl, nSets, vials, singles, rows, batchTotal, perMl, vps, cPerf, cSet, cSingle,
+  return { ml, vml, kPer, loss, extra, scent, series, bottles, bare, totalMl, nSets, vials, singles, rows, batchTotal, perMl, vps, cPerf, cSet, cSingle,
     missing: rows.filter((r) => !r.off && !r.price), budget: rows.reduce((t, r) => t + r.budget, 0), spentAll: P.purchases.reduce((t, p) => t + p.amount, 0) };
 }
 const pIn = (attr, key, val, w) => `<input type="number" inputmode="decimal" step="any" class="pin" style="width:${w || 74}px" data-${attr}="${esc(key)}" value="${val === undefined ? '' : val}" placeholder="0">`;
@@ -1041,14 +1050,15 @@ function prodQty(C){
   const P = S.P, q = P.qty, v = P.vel, mon = P.lastRec ? Number(P.lastRec.slice(5)) + ' 月' : '';
   const vel = (id) => { const w = v[id] || { direct: 0, consign: 0 }; return `參考月銷約 ${w.direct + w.consign}（近 30 天店內＋官網 ${w.direct}、${mon}寄售 ${w.consign}）`; };
   const scent = C.scent.map((s) => `<div class="prow col"><div class="pn"><b>${esc(s.x.name)}</b><small>${vel(s.x.id)}</small></div>
-      <div class="pf"><label>總公升數（L）${pIn('pq', 'liters:' + s.x.id, q['liters:' + s.x.id])}</label><label>正裝瓶數${pIn('pq', 'sell:' + s.x.id, q['sell:' + s.x.id])}</label></div>
+      <div class="pf"><label>總公升數（L）${pIn('pq', 'liters:' + s.x.id, q['liters:' + s.x.id])}</label><label>正裝瓶數${pIn('pq', 'sell:' + s.x.id, q['sell:' + s.x.id])}</label><label>其中裸瓶${pIn('pq', 'bare:' + s.x.id, q['bare:' + s.x.id])}</label></div>
+      ${s.sell ? `<div class="calc">正裝 ${fmt(s.sell)} 瓶：裝盒 <b>${fmt(s.boxed)}</b>${s.bare ? `、裸瓶 <b>${fmt(s.bare)}</b>（不裝外盒，到貨記成瑕疵、留著分裝）` : '，全部裝盒'}</div>` : ''}
       ${s.total ? `<div class="calc ${s.remain < 0 ? 'bad' : ''}">${s.remain < 0 ? `正裝要用 ${fmtL(s.used)}，比總量多 ${fmtL(-s.remain)}：減少瓶數或增加公升數` : `正裝用 ${fmtL(s.used)}，剩 ${fmtL(s.remain)} → 針管 <b>${fmt(s.vials)}</b> 支（裝組 ${fmt(s.inSets)}、單支 <b>${fmt(s.singles)}</b>）`}</div>` : '<div class="calc">填總公升數後，會算出剩下的液體可以裝幾支針管</div>'}</div>`).join('');
   const series = C.series.map((g) => `<div class="prow col"><div class="pn"><b>${esc(g.k.name)}</b><small>${vel(g.k.id)}</small></div>
       <div class="pf"><label>要裝幾組${pIn('pq', 'set:' + g.k.id, q['set:' + g.k.id])}</label></div>
       <div class="calc ${g.want > g.max ? 'bad' : ''}">一組 ${g.mem.map((s) => esc(s.x.name)).join('、')} 各 ${C.kPer} 支。液體最多可裝 ${fmt(g.max)} 組${g.want > g.max ? `，設定的 ${fmt(g.want)} 組裝不滿，實際 ${fmt(g.sets)} 組` : `，實際裝 <b>${fmt(g.sets)}</b> 組`}</div></div>`).join('');
   return `<div class="card"><h3 style="margin:0">每款要做多少</h3>
-      <p class="lab" style="margin:0">工廠直接做成可以賣的成品。每款填「總公升數」和「正裝瓶數」，剩下的液體先裝同系列的針管組，再多的做成單支（不裝盒）。改完點別處就會存。</p>${scent}
-      <div class="kv b"><span>合計</span><span>${fmtL(C.totalMl)}・正裝 ${fmt(C.bottles)} 瓶</span></div></div>
+      <p class="lab" style="margin:0">工廠直接做成可以賣的成品。每款填「總公升數」和「正裝瓶數」；外盒不夠時，在「其中裸瓶」填不裝盒的瓶數（外盒、外盒貼紙、內附卡片和插畫會少叫，玻璃瓶、噴頭、瓶蓋、瓶身貼紙照瓶數叫）。剩下的液體先裝同系列的針管組，再多的做成單支（不裝盒）。改完點別處就會存。</p>${scent}
+      <div class="kv b"><span>合計</span><span>${fmtL(C.totalMl)}・正裝 ${fmt(C.bottles)} 瓶${C.bare ? `（裝盒 ${fmt(C.bottles - C.bare)}、裸瓶 ${fmt(C.bare)}）` : ''}</span></div></div>
     <div class="card"><h3 style="margin:0">針管組</h3><p class="lab" style="margin:0">組數受外盒數量限制，填你要裝的組數。正裝一瓶 ${C.ml} ml、針管一支 ${C.vml} ml（在「成本」頁改）。</p>${series}
       <div class="kv b"><span>合計</span><span>${fmt(C.nSets)} 組・單支 ${fmt(C.singles)} 支・針管共 ${fmt(C.vials)} 支</span></div></div>`;
 }
@@ -1072,7 +1082,7 @@ function prodBom(C){
     if (r.done && !(S.exp || {})[r.row]) return `<div class="brow mini okrow" id="bom-${r.row}"><div class="bt"><span><b>✓ ${esc(r.name)}</b>　<small>${r.whole ? '已訂' : `已足額：需要 ${fmt(r.need)}・工廠存貨 ${fmt(r.have)}・現有庫存 ${fmt(r.stock)}・已訂 ${fmt(r.ordered)}`}${r.spent ? `・已付 $${fmt(r.spent)}` : ''}</small></span><span class="bbtn">${r.ordered && !(S.pay && S.pay.name === r.name) ? `<button type="button" class="chip sq" data-a="payOpen" data-v="${esc(r.name)}">記付款</button>` : ''}<button type="button" class="chip sq" data-a="bomExp" data-v="${r.row}">展開</button></span></div>${extras(r)}</div>`;
     return `<div class="brow" id="bom-${r.row}">
       <div class="bt"><b>${esc(r.name)}</b>${r.done ? `<span class="bbtn"><span class="tag g">✓ 已足額</span><button type="button" class="chip sq" data-a="bomExp" data-v="${r.row}">收起</button></span>` : `<span class="tag w">${r.whole ? '待訂' : '待訂 ' + fmt(r.todo)}</span>`}</div>
-      <small>${r.use}${r.whole ? '' : ' × ' + r.per + '・備品 ' + Math.round(r.rate * 100) + '%'}${r.split ? (r.split === '款式' ? '・六款各自' : '・兩個系列各自') : ''}${r.vendor ? '・' + esc(r.vendor) : ''}${r.moq ? '・最低 ' + esc(r.moq) : ''}${r.note ? '<br>' + esc(r.note) : ''}</small>
+      <small>${r.use}${r.boxOnly && C.bare ? '（只算裝盒的，扣掉裸瓶 ' + fmt(C.bare) + '）' : ''}${r.whole ? '' : ' × ' + r.per + '・備品 ' + Math.round(r.rate * 100) + '%'}${r.split ? (r.split === '款式' ? '・六款各自' : '・兩個系列各自') : ''}${r.vendor ? '・' + esc(r.vendor) : ''}${r.moq ? '・最低 ' + esc(r.moq) : ''}${r.note ? '<br>' + esc(r.note) : ''}</small>
       ${r.whole ? `<div class="ofill" style="gap:8px">${recBlock(r, true)}</div>` : qtab(r)}
       <div class="bprice"><label>${r.whole ? '整批總價（含運）' : '單價（含運）'}<span class="pfx">$</span>${pIn('bp', String(r.row), r.price || '', 110)}</label>${r.whole ? '' : `<span>× ${fmt(r.buy)} ＝ 預算 <b>$${fmt(r.budget)}</b></span>`}</div>${!r.whole && !r.off && !num(r.price) && (r.have || r.stock) ? '<small class="warn">已經有庫存的也要填單價，不然每瓶成本會少算這一項。找不到當初的價格，就填這次的報價或市價。</small>' : ''}
       <div class="bn">${r.spent ? `<span>已付 <b>$${fmt(r.spent)}</b></span>` : '<span></span>'}${btns(r)}</div>
@@ -1230,12 +1240,12 @@ function payload(){
   if (a === 'course') { const f = F.course; const auto = coursePrice(S.B.courses.find((x) => x.name === f.course), f.people); return { action: 'course', date: f.date, note: f.note, course: f.course, people: f.people, classDate: f.classDate, amount: f.amount === '' ? auto : f.amount, account: f.account, party: f.party }; }
   if (a === 'expense' && F.expense.scope === '店務' && F.expense.category === '營業稅') { const f = F.expense; return { action: 'transfer', date: f.date, note: f.note, category: '營業稅繳納', from: f.account, to: '', amount: f.amount }; }
   if (a === 'expense') { const f = F.expense; return { action: 'expense', date: f.date, note: f.note, category: f.category, amount: f.amount, account: f.account, party: f.party, batch: f.scope === '店務' ? f.batch : '', bom: f.batch ? f.bom : '' }; }
-  if (a === 'collab') { const f = F.collab; return { action: 'collab', date: f.date, eventDate: f.eventDate, note: f.note, kind: f.kind, party: f.party, amount: f.kind === '報名抽成' ? num(f.people) * num(f.per) : f.amount, people: f.people, per: f.per, account: f.account }; }
+  if (a === 'collab') { const f = F.collab; return { action: 'collab', date: f.date, eventDate: f.eventDate, note: f.note, kind: f.kind, party: f.party, amount: f.kind === '報名抽成' ? num(f.people) * num(f.per) : f.amount, people: f.people, per: f.per, account: f.account, invoice: f.invoice }; }
   if (a === 'consign') { const f = F.consign; return { action: 'consign', date: f.date, note: f.note, brand: f.brand, price: f.price, account: f.account }; }
   if (a === 'send') { const f = F.send; return { action: 'send', date: f.date, note: f.note, store: f.store, lines: Object.keys(f.q).map((id) => ({ id, qty: f.q[id] })) }; }
   if (a === 'recon') { const f = F.recon; const tg = reconTargets().find((x) => x.key === f.store) || { members: [] };
     return f.mode === '收款' ? { action: 'reconPay', date: f.date, note: f.note, store: f.store, salesMonth: f.salesMonth, amount: f.amount, account: f.account }
-      : { action: 'recon', date: f.date, note: f.note, store: f.store, salesMonth: f.salesMonth, lines: Object.keys(f.q).map((k) => { const [i, id] = k.split(':'); return { id, qty: f.q[k], store: (tg.members[+i] || {}).name }; }) }; }
+      : { action: 'recon', date: f.date, note: f.note, store: f.store, salesMonth: f.salesMonth, invoice: f.invoice, lines: Object.keys(f.q).map((k) => { const [i, id] = k.split(':'); return { id, qty: f.q[k], store: (tg.members[+i] || {}).name }; }) }; }
   if (a === 'split') { const f = F.split; return { action: 'split', date: f.date, note: f.note, series: f.series, opens: Object.keys(f.open).map((id) => ({ id, bad: f.open[id].bad, good: f.open[id].good, show: f.show[id] || 0 })), made: Object.keys(f.made).map((id) => ({ id, qty: f.made[id] })) }; }
   if (a === 'gift') { const f = F.gift; return { action: 'gift', date: f.date, note: f.note, party: f.party, lines: Object.keys(f.q).map((id) => ({ id, qty: f.q[id] })) }; }
   if (MGROUP[a]) { const f = F.monthly; return { action: 'transfers', date: f.date, items: itemsOf(a).filter((x) => f.ticks[x.key] && num(f.amounts[x.key]) > 0).map((x) => {
@@ -1301,7 +1311,7 @@ function prefill(t){
       S.action = 'sale'; break;
     }
     case '課程收款': Object.assign(F.course, base, { course: d.course, people: d.people || 1, classDate: d.classDate || '', amount: t.amount, account: t.to, party: t.party }); S.action = 'course'; break;
-    case '品牌合作': Object.assign(F.collab, base, { kind: t.category, eventDate: d.eventDate || '', people: d.people || '', per: d.per || '', party: t.party, amount: t.amount, account: t.to }); S.action = 'collab'; break;
+    case '品牌合作': Object.assign(F.collab, base, { kind: t.category, invoice: d.inv === false ? '0' : '1', eventDate: d.eventDate || '', people: d.people || '', per: d.per || '', party: t.party, amount: t.amount, account: t.to }); S.action = 'collab'; break;
     case '代售': Object.assign(F.consign, base, { brand: t.party, price: t.amount, account: t.to }); S.action = 'consign'; break;
     case '支出': Object.assign(F.expense, base, { scope: t.scope === '個人' ? '個人' : '店務', category: t.category, amount: t.amount, account: t.from, party: t.party, batch: (t.d || {}).batch || '', bom: (t.d || {}).bom || '' }); S.action = 'expense'; break;
     case '寄售送貨': Object.assign(F.send, base, { store: t.party, q: qOf(d.lines) }); S.action = 'send'; break;
@@ -1309,7 +1319,7 @@ function prefill(t){
       const key = d.group ? 'G:' + d.group : t.party;
       const tg = reconTargets().find((x) => x.key === key) || { members: [] };
       const q = {}; (d.lines || []).forEach((l) => { const i = Math.max(0, tg.members.findIndex((m) => m.name === l.store)); q[i + ':' + l.id] = (q[i + ':' + l.id] || 0) + l.qty; });
-      Object.assign(F.recon, base, { mode: '對帳', store: key, salesMonth: t.rec, q }); S.action = 'recon'; break;
+      Object.assign(F.recon, base, { mode: '對帳', store: key, salesMonth: t.rec, q, invoice: d.inv === false ? '0' : '1' }); S.action = 'recon'; break;
     }
     case '寄售收款': { const isG = reconTargets().some((x) => x.key === 'G:' + t.party); Object.assign(F.recon, base, { mode: '收款', store: isG ? 'G:' + t.party : t.party, salesMonth: t.rec, amount: t.amount, account: t.to }); S.action = 'recon'; break; }
     case '分裝': {
@@ -1334,7 +1344,7 @@ function entryText(t){
   switch (t.action) {
     case '商品銷售': return { title: lines(d.lines), sub: (d.channel === '官網' ? '官網・' : '店內・') + t.to + (d.coupons ? '・折抵券 ×' + d.coupons : '') + (d.gifts && d.gifts.length ? '・贈 ' + lines(d.gifts) : ''), amt: '+' + money(t.amount), c: 'in-c' };
     case '課程收款': return { title: d.course, sub: d.people + ' 人・上課 ' + d.classDate + '・' + t.to, amt: '+' + money(t.amount), c: 'in-c' };
-    case '品牌合作': return { title: '品牌合作・' + t.category + (t.party ? '・' + t.party : ''), sub: (d.eventDate ? '活動 ' + d.eventDate + '・' : '') + '收進 ' + t.to, amt: '+' + money(t.amount), c: 'in-c' };
+    case '品牌合作': return { title: '品牌合作・' + t.category + (t.party ? '・' + t.party : ''), sub: (d.eventDate ? '活動 ' + d.eventDate + '・' : '') + (d.inv === false || NOINV.indexOf(t.category) > -1 ? '不開發票・' : '') + '收進 ' + t.to, amt: '+' + money(t.amount), c: 'in-c' };
     case '代售': return { title: t.party + ' 代售', sub: '店的收入 ' + money((d.shop || 0) + (d.tax || 0)) + '・應付品牌 ' + money(d.brand), amt: '+' + money(t.amount), c: 'in-c' };
     case '支出': return { title: t.category + ((t.d || {}).batch ? '・第二批' : ''), sub: (t.scope === '個人' ? '個人・' : '') + t.from + (t.party ? '・' + t.party : '') + ((t.d || {}).bom ? '・' + t.d.bom : ''), amt: '−' + money(t.amount), c: 'out-c' };
     case '寄售送貨': return { title: '送貨到 ' + t.party, sub: lines(d.lines), amt: '庫存', c: '' };
@@ -1508,7 +1518,7 @@ function vatCard(s){
       <div class="kv s"><span>本月 15 日前申報${v.paidThisMonth ? '，已繳 ' + money(v.paidThisMonth) : '，尚未記繳納'}</span><span></span></div>` : ''}
     <div class="kv tot"><span>稅金預留目前</span><span>${money(v.reserve)}</span></div>
     <div class="kv b ${ok ? 'in-c' : 'out-c'}"><span>${ok ? '足夠，多出' : '還差'}</span><span>${money(Math.abs(v.gap))}</span></div>
-    <p class="lab" style="margin:2px 0 0">應提稅金＝收入裡含的 5% 營業稅，還沒扣掉進貨、房租等有統編發票的進項稅額，所以實際要繳的通常會少一些。繳稅時用「付款與繳稅 › 繳營業稅」（從稅金預留付）或「其他轉帳 › 營業稅繳納」（從其他帳戶付）記，記成「支出」系統不會認得是繳稅。</p>
+    <p class="lab" style="margin:2px 0 0">應提稅金＝收入裡含的 5% 營業稅（照開發票的月份：課程照上課月，品牌合作照收款月，商品、寄售照銷售月；選了「不開發票」的、活動企劃費、報名抽成不算），還沒扣掉進貨、房租等有統編發票的進項稅額，所以實際要繳的通常會少一些。繳稅時用「付款與繳稅 › 繳營業稅」（從稅金預留付）或「其他轉帳 › 營業稅繳納」（從其他帳戶付）記，記成「支出」系統不會認得是繳稅。</p>
   </div>`;
 }
 function itemCard(s){
