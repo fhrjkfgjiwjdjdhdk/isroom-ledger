@@ -1617,7 +1617,7 @@ function renderSet(){
     <button class="save" data-a="login">儲存並連線</button>
     <button class="ghost" data-a="logout">清除這台裝置的設定</button>
     <p class="lab">這些資料只存在這台裝置的瀏覽器裡，不會出現在 GitHub 上。</p></div>
-    ${S.B ? `<div class="card"><h3>首頁版本</h3><p class="lab" style="margin:0">預設：Essen 用 Essen 版，其他人用 Esme 版。只影響這台裝置。</p>
+    ${S.B ? `<div class="card" style="gap:4px"><p class="lab" style="margin:0">程式版本：2026-11-26（含借入款、調價、ASA 扣抵）</p></div><div class="card"><h3>首頁版本</h3><p class="lab" style="margin:0">預設：Essen 用 Essen 版，其他人用 Esme 版。只影響這台裝置。</p>
       <div class="grid g2">${chip(role() === 'esme', 'role', 'esme', '<b>Esme 版</b><small>收到錢、付錢出去兩個大按鈕</small>', 'sq two')}${chip(role() === 'essen', 'role', 'essen', '<b>Essen 版</b><small>貨品、記帳、管理（對帳、結算）</small>', 'sq two')}</div></div>` : ''}</div>`;
 }
 
