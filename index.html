@@ -212,6 +212,8 @@ async function api(body){
 /* ───────── 資料工具 ───────── */
 const P = () => S.B.products;
 const prod = (id) => P().find((p) => p.id === id) || { id, name: id, cat: '', price: null };
+// 調價：生效日以前（寄售看銷售月份）照原售價
+const priceOn = (p, key) => p && p.priceFrom && p.oldPrice !== null && p.oldPrice !== undefined && key && key < p.priceFrom.slice(0, key.length) ? p.oldPrice : (p ? p.price : null);
 const byCat = (c) => P().filter((p) => p.cat === c);
 const stockOf = (loc, id, state) => { const r = S.B.stock.find((x) => x.loc === loc && x.item === id && x.state === (state || '良品')); return r ? r.qty : 0; };
 const today = () => S.B ? S.B.today : new Date().toISOString().slice(0,10);
@@ -260,7 +262,7 @@ function promoState(f){
   if (!pr) return null;
   const hits = f.cart.filter((l) => { const p = prod(l.id); return (!pr.cat || pr.cat === '任一商品' || p.cat === pr.cat) && (!pr.item || pr.item === p.id || pr.item === p.name); });
   const qty = hits.reduce((t, l) => t + l.qty, 0);
-  const amt = hits.reduce((t, l) => t + (prod(l.id).price || 0) * l.qty, 0);
+  const amt = hits.reduce((t, l) => t + (priceOn(prod(l.id), f.date) || 0) * l.qty, 0);
   let slots = 0;
   if (pr.minAmt > 0) slots = amt >= pr.minAmt ? (pr.repeat ? Math.floor(amt / pr.minAmt) : 1) : 0;
   else { const mq = pr.minQty || 1; slots = qty >= mq ? (pr.repeat ? Math.floor(qty / mq) : 1) : 0; }
@@ -352,6 +354,7 @@ const payAccs = () => accounts().filter((a) => ['收款', '營運', '個人'].in
 const expenseAccs = (f) => { const base = payAccs(); if (f.scope !== '店務') return base;
   const extra = (f.category === '營業稅' ? ['稅金預留'] : FIXED_BILLS.indexOf(f.category) > -1 ? ['固定支出預留'] : []).filter((n) => !S.B.paused || f.account === n);   // 撥存暫停時，預留帳戶沒有錢，不列出來
   return accounts().filter((a) => extra.indexOf(a.name) > -1).concat(base); };
+const loanAccs = () => accounts().filter((a) => a.kind === '借款');
 const recvAccs = () => accounts().filter((a) => ['收款', '營運', '個人'].indexOf(a.kind) > -1 && !/待入帳$/.test(a.name));
 const itemsOf = (a) => S.B.monthItems.filter((x) => x.group === MGROUP[a] && (x.group !== '結清' || settleSec(x) === a));
 
@@ -385,7 +388,7 @@ const FORMS = {
          <div class="grid g2" style="align-items:end;margin-top:8px">${field('sale.bp', '售價（元）', inp('sale.bp', 'number', f.bp, '', '0'))}<button type="button" class="chip sq" style="height:44px" data-a="saleAddB">確認新增</button></div>`
       : byCat(f.cat).map((p) => `<button type="button" class="chip" data-a="saleAdd" data-v="${p.id}">+ ${esc(p.name.replace('・單支',''))}<small>(${stockOf('店內', p.id)})</small></button>`).join('');
     const bcs = f.channel === '店內' ? f.bc : [];
-    const cart = f.cart.length || bcs.length ? f.cart.map((l) => { const p = prod(l.id); return `<div class="row"><span class="nm"><span>${esc(p.name)}</span><small>${p.price === null ? '未定價，請先到試算表填' : money(p.price) + ' × ' + l.qty + ' = ' + money(p.price * l.qty)}</small></span>${stepper('saleQty', l.id, l.qty)}</div>`; }).join('')
+    const cart = f.cart.length || bcs.length ? f.cart.map((l) => { const p = prod(l.id), pp = priceOn(p, f.date); return `<div class="row"><span class="nm"><span>${esc(p.name)}</span><small>${pp === null ? '未定價，請先到試算表填' : money(pp) + ' × ' + l.qty + ' = ' + money(pp * l.qty) + (pp !== p.price ? '（調價前）' : '')}</small></span>${stepper('saleQty', l.id, l.qty)}</div>`; }).join('')
       + bcs.map((x, i) => `<div class="row"><span class="nm"><span>${esc(x.brand)}（寄賣品牌）</span><small>售價 ${money(x.price)}</small></span><button type="button" class="ghost" style="min-height:36px;padding:0 10px" data-a="saleDelB" data-v="${i}">刪除</button></div>`).join('') : `<p class="lab" style="text-align:center;margin:12px 0">這筆還沒有品項</p>`;
     const ps = promoState(f);
     let promo = '';
@@ -402,7 +405,7 @@ const FORMS = {
     const fullQty = f.cart.filter((l) => prod(l.id).cat === '正裝').reduce((t, l) => t + l.qty, 0);
     if (f.channel !== '店內' || f.coupons > fullQty) f.coupons = f.channel === '店內' ? fullQty : 0;
     const cv = S.B.couponValue || 500, off = f.coupons * cv;
-    const gross = f.cart.reduce((t, l) => t + (prod(l.id).price || 0) * l.qty, 0);
+    const gross = f.cart.reduce((t, l) => t + (priceOn(prod(l.id), f.date) || 0) * l.qty, 0);
     const total = gross - off;
     const bcSum = bcs.reduce((t, x) => t + x.price, 0);
     const coupon = f.channel === '店內' && fullQty ? `<div class="promo"><div><div class="t">常態活動</div><b>正裝折抵券 ${money(cv)}</b><div class="lab" style="margin:0">客人用了幾張就填幾張，一瓶正裝最多用一張</div></div><div class="row" style="border:0;padding:0"><span class="nm"><span>使用張數</span><small>${f.coupons ? '折抵 ' + money(off) : '沒有使用'}</small></span>${stepper('coupon', 'n', f.coupons)}</div></div>` : '';
@@ -512,7 +515,9 @@ const FORMS = {
       <div class="grid g2">${T.map((x, i) => chip(f.store === x.key, 'reconT', i, esc(x.label), 'sq')).join('')}</div>
       <div><p class="lab">銷售月份（收入算在這個月，不是收款日）</p><div class="grid g3">${months.map((m) => chip(f.salesMonth === m, 'set', 'recon.salesMonth|' + m, m.replace('-', ' / '), 'sq')).join('')}</div></div>`;
     if (f.mode === '收款') {
-      return head + `${field('recon.amount', tg.members.length > 1 ? '實收金額（合併匯款的總額）' : '實收金額', inp('recon.amount', 'number', f.amount, 'big', '0'))}
+      const loans = (S.B.loans || []).filter((l) => l.owed > 0), L0 = loans[0];
+      const offBox = L0 ? `<div class="promo"><div><div class="t">扣抵借款</div><b>${esc(L0.name.replace('借款・', ''))} 還欠 ${money(L0.owed)}</b><div class="lab" style="margin:0">對方從這次貨款直接扣掉、拿去還借款的金額。實收填真的匯進來的錢；整筆都扣掉的話，實收填 0。</div></div>${field('recon.offset', '這次扣抵', inp('recon.offset', 'number', f.offset, '', '0'))}</div>` : '';
+      return head + `${field('recon.amount', tg.members.length > 1 ? '實收金額（合併匯款的總額）' : '實收金額', inp('recon.amount', 'number', f.amount, 'big', '0'))}${offBox}
         <div><p class="lab">收進哪個帳戶</p><div class="chips">${recvAccs().map((a) => chip(f.account === a.name, 'set', 'recon.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>
         <div class="sum"><span class="lab" style="margin:0">收款會沖銷「寄售應收未收」，不會重複算成收入。</span></div>${dateNote(f, 'recon')}`;
     }
@@ -523,10 +528,10 @@ const FORMS = {
       const n = ps.reduce((t, p) => t + tg.members.reduce((a, _, i) => a + (f.q[i + ':' + p.id] || 0), 0), 0);
       rows += `<div class="grp"><span>${esc(c)}</span><span>${n ? '共 ' + n : ''}</span></div>`;
       rows += ps.map((p) => multi
-        ? `<div class="row" style="flex-wrap:wrap"><span class="nm" style="flex-basis:100%"><span>${esc(p.name)}</span><small>${p.price === null ? '未定價' : money(p.price)}</small></span><div style="display:flex;flex-wrap:wrap;gap:8px;width:100%">${tg.members.map((m, i) => `<div style="flex:1 1 128px;display:flex;align-items:center;justify-content:space-between;background:var(--paper);border-radius:10px;padding:2px 4px 2px 10px"><small style="color:var(--blue);white-space:nowrap;margin-right:4px">${esc(short(m))}</small>${stepper('reconQ', i + ':' + p.id, f.q[i + ':' + p.id], 1)}</div>`).join('')}</div></div>`
-        : `<div class="row"><span class="nm"><span>${esc(p.name)}</span><small>${p.price === null ? '未定價' : money(p.price)}</small></span>${stepper('reconQ', '0:' + p.id, f.q['0:' + p.id])}</div>`).join('');
+        ? `<div class="row" style="flex-wrap:wrap"><span class="nm" style="flex-basis:100%"><span>${esc(p.name)}</span><small>${priceOn(p, f.salesMonth) === null ? '未定價' : money(priceOn(p, f.salesMonth))}</small></span><div style="display:flex;flex-wrap:wrap;gap:8px;width:100%">${tg.members.map((m, i) => `<div style="flex:1 1 128px;display:flex;align-items:center;justify-content:space-between;background:var(--paper);border-radius:10px;padding:2px 4px 2px 10px"><small style="color:var(--blue);white-space:nowrap;margin-right:4px">${esc(short(m))}</small>${stepper('reconQ', i + ':' + p.id, f.q[i + ':' + p.id], 1)}</div>`).join('')}</div></div>`
+        : `<div class="row"><span class="nm"><span>${esc(p.name)}</span><small>${priceOn(p, f.salesMonth) === null ? '未定價' : money(priceOn(p, f.salesMonth))}</small></span>${stepper('reconQ', '0:' + p.id, f.q['0:' + p.id])}</div>`).join('');
     });
-    const list = Object.keys(f.q).reduce((t, k) => t + (f.q[k] || 0) * (prod(k.split(':')[1]).price || 0), 0);
+    const list = Object.keys(f.q).reduce((t, k) => t + (f.q[k] || 0) * (priceOn(prod(k.split(':')[1]), f.salesMonth) || 0), 0);
     const fullQty = Object.keys(f.q).filter((k) => prod(k.split(':')[1]).cat === '正裝').reduce((t, k) => t + (f.q[k] || 0), 0);
     if ((f.coupons || 0) > fullQty) f.coupons = fullQty;
     const cv = S.B.couponValue || 500, off = (f.coupons || 0) * cv, gross = list - off;   // 折抵券：銷售額先扣，抽成照折完的價格算
@@ -629,17 +634,19 @@ const FORMS = {
   },
   transfer(){
     const f = S.F.transfer;
-    const DESC = { '帳戶間轉帳': '店裡帳戶之間搬錢，例：現金存銀行、LINE Pay 撥進銀行', '業主投入資金': '業主從個人存款拿錢補進店裡', '業主薪資提取': '業主從店裡領錢（薪水或分紅）', '期初資金': '開帳時的存款，或開帳日以前的舊帳的錢（例：10 月訂單的匯款）' };
-    const cats = ['帳戶間轉帳', '業主投入資金', '業主薪資提取', '期初資金'];
+    const DESC = { '帳戶間轉帳': '店裡帳戶之間搬錢，例：現金存銀行、LINE Pay 撥進銀行', '業主投入資金': '業主從個人存款拿錢補進店裡', '業主薪資提取': '業主從店裡領錢（薪水或分紅）', '期初資金': '開帳時的存款，或開帳日以前的舊帳的錢（例：10 月訂單的匯款）', '借入款': '跟別人借的錢進來（例：ASA 預支第二批）', '還借款': '直接匯錢還借款（被貨款扣抵的不用記這裡）' };
+    const cats = ['帳戶間轉帳', '業主投入資金', '業主薪資提取', '期初資金'].concat(loanAccs().length ? ['借入款', '還借款'] : []);
     if (cats.indexOf(f.category) < 0) cats.push(f.category);   // 修改舊紀錄時保留原本的類別
-    const accs = accounts().filter((a) => !/待入帳$/.test(a.name) || a.name === f.from || a.name === f.to);
-    const hint = { '期初資金': '新帳戶開好、把現有的錢存進去時用。只填「轉入帳戶」。', '業主投入資金': '從個人存款補錢進店裡。', '代收款轉回': '店的收入之前進了個人帳戶，現在轉回店的帳戶。', '代墊歸還': '店還你之前代墊的錢。', '帳戶間轉帳': '例如現金存銀行、店內 LINE Pay 入帳。', '業主薪資提取': '店發薪水給主理人。', '撥存': '存進稅金、固定支出、原料或耗材預留帳戶。', '代售貨款支付': '付給代售品牌的貨款，只選「轉出帳戶」。', '營業稅繳納': '申報營業稅時繳的錢，通常從「稅金預留」付出，只選「轉出帳戶」。' }[f.category];
+    const accs0 = accounts().filter((a) => (!/待入帳$/.test(a.name) || a.name === f.from || a.name === f.to) && a.kind !== '借款');
+    const fromAccs = f.category === '借入款' ? loanAccs() : accs0, toAccs = f.category === '還借款' ? loanAccs() : accs0;
+    const hint = { '期初資金': '新帳戶開好、把現有的錢存進去時用。只填「轉入帳戶」。', '業主投入資金': '從個人存款補錢進店裡。', '代收款轉回': '店的收入之前進了個人帳戶，現在轉回店的帳戶。', '代墊歸還': '店還你之前代墊的錢。', '帳戶間轉帳': '例如現金存銀行、店內 LINE Pay 入帳。', '業主薪資提取': '店發薪水給主理人。', '撥存': '存進稅金、固定支出、原料或耗材預留帳戶。', '代售貨款支付': '付給代售品牌的貨款，只選「轉出帳戶」。', '營業稅繳納': '申報營業稅時繳的錢，通常從「稅金預留」付出，只選「轉出帳戶」。', '借入款': '轉出選「借款・對方」，轉入選錢實際進的帳戶。不算收入；借款帳戶會變負數，代表還欠多少。如果對方是直接付給廠商，不用記這裡，改在第二批「記付款」選「借款・對方」付。', '還借款': '轉出選付錢的帳戶，轉入選「借款・對方」。對方從寄售貨款直接扣的，記在「寄售對帳 › 收款」的「扣抵借款」。' }[f.category];
     return `<h3>其他轉帳</h3>
       <div class="grid g2">${cats.map((c) => chip(f.category === c, 'set', 'transfer.category|' + c, '<b>' + esc(c) + '</b>' + (DESC[c] ? '<small>' + esc(DESC[c]) + '</small>' : ''), 'sq two')).join('')}</div>
       ${f.category === '期初資金' ? '<p class="lab" style="margin:0">只要選「轉入帳戶」，不算收入。</p>' : ''}
       <p class="lab" style="margin:0">繳營業稅請用「支出 › 稅金 › 營業稅」；轉回店裡、代墊歸還在「個人帳戶和店的往來」；撥存在「月初撥存」；代售品牌貨款在「付款與繳稅」。</p>
-      ${f.category === '期初資金' ? '' : `<div><p class="lab">轉出帳戶</p><div class="chips">${accs.map((a) => chip(f.from === a.name, 'set', 'transfer.from|' + a.name, esc(a.name))).join('')}</div></div>`}
-      ${f.category === '代售貨款支付' || f.category === '營業稅繳納' ? '' : `<div><p class="lab">轉入帳戶</p><div class="chips">${accs.map((a) => chip(f.to === a.name, 'set', 'transfer.to|' + a.name, esc(a.name))).join('')}</div></div>`}
+      ${hint && /借/.test(f.category) ? `<p class="lab" style="margin:0">${hint}</p>` : ''}
+      ${f.category === '期初資金' ? '' : `<div><p class="lab">${f.category === '借入款' ? '跟誰借' : '轉出帳戶'}</p><div class="chips">${fromAccs.map((a) => chip(f.from === a.name, 'set', 'transfer.from|' + a.name, esc(a.name))).join('')}</div></div>`}
+      ${f.category === '代售貨款支付' || f.category === '營業稅繳納' ? '' : `<div><p class="lab">${f.category === '還借款' ? '還給誰' : '轉入帳戶'}</p><div class="chips">${toAccs.map((a) => chip(f.to === a.name, 'set', 'transfer.to|' + a.name, esc(a.name))).join('')}</div></div>`}
       ${field('transfer.amount', '金額', inp('transfer.amount', 'number', f.amount, 'big', '0'))}
       ${dateNote(f, 'transfer')}`;
   }
@@ -1186,7 +1193,7 @@ function payPanel(r){
     <small style="color:var(--sub)">補記尾款或之後才付的款。記成「支出 › ${f.category}」並標記第二批。</small>
     ${field('pay.amount', '這次付多少', inp('pay.amount', 'number', f.amount, 'big', '0'))}
     ${(() => { const vs = [...new Set((r.rec || []).map((x) => x.vendor).filter(Boolean))]; return `<div><p class="lab">付給誰</p>${vs.length ? `<div class="chips" style="margin-bottom:6px">${vs.map((v) => chip(f.vendor === v, 'set', 'pay.vendor|' + v, esc(v), 'sq')).join('')}</div>` : ''}${inp('pay.vendor', 'text', f.vendor, '', '廠商名稱')}</div>`; })()}
-    <div><p class="lab">用哪個帳戶付</p><div class="chips">${payAccs().map((a) => chip(f.account === a.name, 'set', 'pay.account|' + a.name, esc(a.name), 'sq')).join('')}</div></div>
+    <div><p class="lab">用哪個帳戶付</p><div class="chips">${payAccs().concat(loanAccs()).map((a) => chip(f.account === a.name, 'set', 'pay.account|' + a.name, esc(a.name), 'sq')).join('')}</div>${loanAccs().length ? '<small style="color:var(--sub)">對方借錢、直接付給廠商的，選「借款・對方」。</small>' : ''}</div>
     ${accScope(f.account) === '個人' ? '<div class="hint">用個人的錢付，會自動記成「代墊」，之後店再還。</div>' : ''}
     <div class="grid g2">${field('pay.date', '付款日期', `<input id="pay.date" data-in="pay.date" type="date" value="${esc(f.date)}">`)}${field('pay.note', '備註（選填）', inp('pay.note', 'text', f.note, '', '例：尾款'))}</div>
     <div class="grid g2"><button type="button" class="ghost" data-a="payCancel">取消</button><button type="button" class="save" style="margin:0" data-a="paySave" ${S.busy ? 'disabled' : ''}>記下付款</button></div></div>`;
@@ -1283,7 +1290,7 @@ function payload(){
   if (a === 'consign') { const f = F.consign; return { action: 'consign', date: f.date, note: f.note, brand: f.brand, price: f.price, account: f.account }; }
   if (a === 'send') { const f = F.send; return { action: 'send', date: f.date, note: f.note, store: f.store, lines: Object.keys(f.q).map((id) => ({ id, qty: f.q[id] })) }; }
   if (a === 'recon') { const f = F.recon; const tg = reconTargets().find((x) => x.key === f.store) || { members: [] };
-    return f.mode === '收款' ? { action: 'reconPay', date: f.date, note: f.note, store: f.store, salesMonth: f.salesMonth, amount: f.amount, account: f.account }
+    return f.mode === '收款' ? { action: 'reconPay', date: f.date, note: f.note, store: f.store, salesMonth: f.salesMonth, amount: f.amount, account: f.account, offset: f.offset || 0, loan: ((S.B.loans || []).find((l) => l.owed > 0) || {}).name }
       : { action: 'recon', date: f.date, note: f.note, store: f.store, salesMonth: f.salesMonth, invoice: f.invoice, coupons: f.coupons || 0, lines: Object.keys(f.q).map((k) => { const [i, id] = k.split(':'); return { id, qty: f.q[k], store: (tg.members[+i] || {}).name }; }) }; }
   if (a === 'split') { const f = F.split; return { action: 'split', date: f.date, note: f.note, series: f.series, opens: Object.keys(f.open).map((id) => ({ id, bad: f.open[id].bad, good: f.open[id].good, show: f.show[id] || 0 })), made: Object.keys(f.made).map((id) => ({ id, qty: f.made[id] })) }; }
   if (a === 'gift') { const f = F.gift; return { action: 'gift', date: f.date, note: f.note, party: f.party, lines: Object.keys(f.q).map((id) => ({ id, qty: f.q[id] })) }; }
@@ -1513,6 +1520,7 @@ function renderReport(){
   const bp = Math.max(0, Math.min(100, s.batch.saved / s.batch.target * 100));
   const promos = s.promos.length ? s.promos.map((p) => `<div class="card" style="gap:4px"><div style="display:flex;justify-content:space-between"><b>活動：${esc(p.name)}</b></div>${p.sold ? `<div class="kv"><span>活動期間賣出正裝</span><span>${p.sold} 瓶</span></div>` : ''}${Object.keys(p.gifts).map((k) => `<div class="kv ind"><span>贈出 ${esc(k)}</span><span>${p.gifts[k]}</span></div>`).join('')}<div class="kv tot"><span>贈品價值（以售價計，參考）</span><span>${money(p.value)}${p.unpriced ? ' ＋未定價品項' : ''}</span></div></div>`).join('') : '';
   const pend = [];
+  (s.loans || []).filter((l) => l.owed > 0).forEach((l) => pend.push(`<div class="kv"><span>${esc(l.name.replace('借款・', ''))} 借款還欠<small style="display:block;color:var(--sub)">借 ${money(l.borrowed)}・已還 ${money(l.repaid)}</small></span><span>${money(l.owed)}</span></div>`));
   if (s.pending.receivable > 0) pend.push(kv('寄售應收未收', s.pending.receivable));
   (s.pending.recvList || []).forEach((x) => pend.push(`<div class="kv s"><span>　${esc(x.store)} ${Number(x.month.slice(5))} 月・${x.overdue ? '<b class="out-c">已過預計日 ' + x.due.slice(5).replace('-', '/') + '</b>' : '預計 ' + x.due.slice(5).replace('-', '/') + ' 前後到帳'}</span><span>${money(x.amount)}</span></div>`));
   if (s.batchSpent > 0) pend.push(kv('第二批採購（先算庫存，不算本月費用）', s.batchSpent));
@@ -1531,7 +1539,7 @@ function renderReport(){
       ${tot('＝ 可自由運用', s.free, s.salary || s.reserves ? (s.salary ? '店真正留下的 ' + n(s.afterSalary) : '營業淨利 ' + n(s.operating)) + (s.reserves ? ' − 撥存 ' + n(s.reserves) : '') : '本月還沒記薪水和撥存，所以跟營業淨利一樣')}
       <p class="lab" style="margin:4px 0 0">・房租、網路、電費在「繳費」記了才會出現；勞健保、發票機不是每月繳，先每月攤一份，所以月初就會看到。<br>・月中看這張會偏負，因為費用先算、收入還沒進來，看月底的數字才準。<br>・第一批貨的成本沒有記，所以商品成本偏低、毛利偏高，最接近真實的是「可自由運用」。</p></div>
     <div class="card" style="gap:8px"><p class="lab" style="margin:0">打平線：固定支出＋薪水＋撥存 ${money(s.breakevenTarget)}</p>${beBar(s, pct)}<div class="kv"><span>扣掉抽成、成本、零碎費用後 ${money(s.breakevenActual)}</span><span class="${s.breakevenActual >= s.breakevenTarget ? 'in-c' : 'out-c'}">${s.breakevenActual >= s.breakevenTarget ? '已達成' : '還差 ' + money(s.breakevenTarget - s.breakevenActual)}</span></div></div>
-    <div class="card" style="gap:8px"><p class="lab" style="margin:0">第二批原料預留：目標 ${money(s.batch.target)}</p><div class="bar"><i style="width:${bp}%;background:var(--blue)"></i></div><div class="kv"><span>已存 ${money(s.batch.saved)}</span><span>還差 ${money(Math.max(0, s.batch.target - s.batch.saved))}</span></div></div>
+    ${s.batch.target > 0 ? `<div class="card" style="gap:8px"><p class="lab" style="margin:0">第二批原料預留：目標 ${money(s.batch.target)}</p><div class="bar"><i style="width:${bp}%;background:var(--blue)"></i></div><div class="kv"><span>已存 ${money(s.batch.saved)}</span><span>還差 ${money(Math.max(0, s.batch.target - s.batch.saved))}</span></div></div>` : ''}
     ${promos}
     ${oweCard(s)}
     ${vatCard(s)}
