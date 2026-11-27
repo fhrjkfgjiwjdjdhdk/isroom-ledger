@@ -159,6 +159,8 @@ small.warn{color:var(--out);line-height:1.55;display:block}
 .brow.mini{padding:8px 0}.brow.mini .bt{align-items:center;flex-wrap:wrap}.brow.mini .bt>span:first-child{flex:1 1 180px;min-width:0}.bbtn .chip{white-space:nowrap}.brow.mini small{font-size:12px}.okrow b{color:#1F7A4D}.okc{color:#1F7A4D;font-weight:700}.vtab.v5{grid-template-columns:1fr auto auto auto auto;gap:3px 10px}.vtab.v5 span.h,.vtab.v5 span{text-align:right}.vtab.v5 span:nth-child(5n+1){text-align:left}.vtab{display:grid;grid-template-columns:1fr auto auto auto;gap:3px 14px;font-size:13px;font-variant-numeric:tabular-nums;background:#F7F9FB;border-radius:10px;padding:8px 10px}.vtab span:not(:nth-child(4n+1)){text-align:right}.vtab .h{color:var(--sub);font-size:11.5px}.paybox{border:1px dashed var(--blue);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;background:#F7FAFD}.bbtn{margin-left:auto;display:flex;gap:6px}.bn .bbtn .chip{margin-left:0}
 .ptabs{display:flex;gap:6px}.ptabs .chip{flex:1 1 auto;padding:0 6px;white-space:nowrap;min-width:0}
 .prow.col{flex-direction:column;align-items:stretch;gap:6px}
+.psec{display:flex;align-items:baseline;gap:10px;margin:16px 4px 0}.psec h3{margin:0;font-size:16px}.psec span{color:var(--sub);font-size:13px}.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+.pcard{background:#fff;border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 2px rgba(20,40,60,.04)}.pcard .ph{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;text-align:left}.pcard .pnm{font-size:22px;font-weight:700;letter-spacing:.04em;line-height:1.2}.pcard .pkg{font-size:34px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;color:var(--deep);white-space:nowrap}.pcard .pkg small{font-size:15px;font-weight:600;margin-left:3px;color:var(--sub)}.pcard .pvel{font-size:12.5px;color:var(--sub);margin-top:-6px;line-height:1.5}.pcard .pout{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pcard .po{background:#F4F7FA;border-radius:12px;padding:10px 12px;min-width:0}.pcard .po small{display:block;font-size:12px;color:var(--sub)}.pcard .po b{font-size:20px;font-variant-numeric:tabular-nums}.pcard .po em{font-style:normal;display:block;font-size:12px;color:var(--sub);margin-top:2px}.pcard .pedit{align-self:flex-start;border:0;border-top:1px solid var(--line);background:none;width:100%;text-align:left;padding:10px 0 0;color:var(--deep);font-weight:600;font-size:13.5px;cursor:pointer}.pf3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.pf3 label{font-size:12px;color:var(--sub);display:flex;flex-direction:column;gap:4px}.pf3 .pin{width:100%!important}.ptot{display:flex;flex-direction:row;flex-wrap:wrap;gap:6px 18px;font-size:14px;margin-top:12px}.ptot b{font-size:16px}
 .calc{background:#F4F7FA;border-radius:10px;padding:8px 10px;font-size:13px;line-height:1.6;color:var(--deep)}.calc.bad{background:#FBE9DF;color:#B4532A}.prow.col .pf{justify-content:flex-end}
 .ptop{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--sub)}.ptop b{color:var(--deep);font-variant-numeric:tabular-nums}
 .prow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #EEF2F5}
@@ -810,12 +812,12 @@ function roBom(C){
 }
 function roQty(C){
   const scent = C.scent.map((s) => { const g = C.series.find((x) => x.k.series === s.x.series);
-    return `<div class="oitem"><div class="bt"><b>${esc(s.x.name)}</b><span class="obig" style="color:var(--ink)"><b>${fmtL(s.total)}</b></span></div>
+    return `<div class="oitem"><div class="bt"><b>${esc(s.x.name)}</b><span class="obig" style="color:var(--ink)"><b>${fmtKg(s.total)}</b></span></div>
       <div class="kv s"><span>正裝 ${C.ml} ml</span><span><b>${fmt(s.sell)}</b> 瓶${s.bare ? `（裝盒 ${fmt(s.boxed)}、裸瓶 ${fmt(s.bare)}）` : ''}</span></div>
       <div class="kv s"><span>針管 ${C.vml} ml</span><span><b>${fmt(s.vials)}</b> 支（裝組 ${fmt(s.inSets)}、單支 ${fmt(s.singles)}）</span></div></div>`; }).join('');
   const series = C.series.map((g) => `<div class="kv"><span>${esc(g.k.name)}</span><span><b>${fmt(g.sets)}</b> 盒</span></div>`).join('');
   return `<div class="card"><h3 style="margin:0">每款生產量</h3>${scent}
-      <div class="kv b"><span>合計</span><span>${fmtL(C.totalMl)}・正裝 ${fmt(C.bottles)} 瓶${C.bare ? `（裸瓶 ${fmt(C.bare)}）` : ''}</span></div></div>
+      <div class="kv b"><span>合計</span><span>${fmtKg(C.totalMl)}・正裝 ${fmt(C.bottles)} 瓶${C.bare ? `（裸瓶 ${fmt(C.bare)}）` : ''}</span></div></div>
     <div class="card"><h3 style="margin:0">針管組</h3><p class="lab" style="margin:0">一盒同系列三款各 ${C.kPer} 支。</p>${series}
       <div class="kv b"><span>合計</span><span>${fmt(C.nSets)} 盒・單支 ${fmt(C.singles)} 支</span></div></div>
     ${C.bare ? '<div class="card"><small style="color:var(--sub);line-height:1.6">裸瓶：外盒不夠，不裝盒、不放卡片插畫。到貨後記成「瑕疵」，分裝時優先拆。</small></div>' : ''}`;
@@ -840,7 +842,7 @@ function orderPage(){
   const C = prodCalc(), t = S.otab || 'bom', todo = C.rows.filter((r) => !r.off && !r.done).length;
   const tabs = [['bom', '物料' + (todo ? ' ' + todo : '')], ['qty', '數量'], ['cost', '成本']];
   return `<div class="card">${back('')}<h3>第二批生產</h3>
-    <div class="ptop"><span>${fmtL(C.totalMl)}</span><span>正裝 <b>${fmt(C.bottles)}</b> 瓶</span><span>針管組 <b>${fmt(C.nSets)}</b> 盒</span><span>單支 <b>${fmt(C.singles)}</b> 支</span></div>
+    <div class="ptop"><span>${fmtKg(C.totalMl)}</span><span>正裝 <b>${fmt(C.bottles)}</b> 瓶</span><span>針管組 <b>${fmt(C.nSets)}</b> 盒</span><span>單支 <b>${fmt(C.singles)}</b> 支</span></div>
     <p class="lab" style="margin:0">只能看。數量、叫貨、付款由 Essen 更新；要付第二批的錢，用「付錢出去」選「是，第二批」。</p>
     <div class="grid g3">${tabs.map(([k, l]) => chip(t === k, 'otab', k, l, 'sq')).join('')}</div></div>
     ${({ bom: roBom, qty: roQty, cost: roCost })[t](C)}`;
@@ -1028,6 +1030,7 @@ async function loadProd(){
   if (S.jump) { const el = document.getElementById(S.jump); S.jump = ''; if (el) el.scrollIntoView({ block: 'center' }); }
 }
 const fmt = (n) => Math.round(+n || 0).toLocaleString('en-US');
+const fmtKg = (ml) => (Math.round(ml / 100) / 10).toLocaleString('en-US') + ' kg';   // 工廠用公斤報量，1 kg ≈ 1 L
 const fmtL = (ml) => (Math.round(ml / 10) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 }).replace(/0$/, '') + ' L';
 // 每款：總公升數 − 正裝 ＝ 剩下的液體裝針管；針管先裝同系列針管組（不超過設定組數），多的變單支
 function prodCalc(){
@@ -1092,23 +1095,31 @@ function prodPage(){
   const tabs = [['qty', '數量'], ['bom', '物料' + (todo ? ' ' + todo : '')], ['cost', '成本'], ['trk', '追查' + (open ? ' ' + open : '')], ['buy', '付款']];
   const body = { qty: prodQty, bom: prodBom, cost: prodCost, trk: () => tasksBlock('生產'), buy: prodBuy }[t](C);
   return `<div class="card">${back('')}<h3>第二批生產</h3>
-    <div class="ptop"><span>${fmtL(C.totalMl)}</span><span>正裝 <b>${fmt(C.bottles)}</b> 瓶</span><span>針管組 <b>${fmt(C.nSets)}</b> 組</span><span>單支 <b>${fmt(C.singles)}</b> 支</span><span>預算 <b>$${fmt(C.budget)}</b></span><span>已付 <b>$${fmt(C.spentAll)}</b></span></div>
+    <div class="ptop"><span>${fmtKg(C.totalMl)}</span><span>正裝 <b>${fmt(C.bottles)}</b> 瓶</span><span>針管組 <b>${fmt(C.nSets)}</b> 組</span><span>單支 <b>${fmt(C.singles)}</b> 支</span><span>預算 <b>$${fmt(C.budget)}</b></span><span>已付 <b>$${fmt(C.spentAll)}</b></span></div>
     <div class="ptabs">${tabs.map(([k, l]) => chip(t === k, 'ptab', k, l, 'sq')).join('')}</div></div>${body}`;
 }
 
 function prodQty(C){
   const P = S.P, q = P.qty, v = P.vel, mon = P.lastRec ? Number(P.lastRec.slice(5)) + ' 月' : '';
   const vel = (id) => { const w = v[id] || { direct: 0, consign: 0 }; return `參考月銷約 ${w.direct + w.consign}（近 30 天店內＋官網 ${w.direct}、${mon}寄售 ${w.consign}）`; };
-  const scent = C.scent.map((s) => `<div class="prow col"><div class="pn"><b>${esc(s.x.name)}</b><small>${vel(s.x.id)}</small></div>
-      <div class="pf"><label>總公升數（L）${pIn('pq', 'liters:' + s.x.id, q['liters:' + s.x.id])}</label><label>正裝瓶數${pIn('pq', 'sell:' + s.x.id, q['sell:' + s.x.id])}</label><label>其中裸瓶${pIn('pq', 'bare:' + s.x.id, q['bare:' + s.x.id])}</label></div>
-      ${s.sell ? `<div class="calc">正裝 ${fmt(s.sell)} 瓶：裝盒 <b>${fmt(s.boxed)}</b>${s.bare ? `、裸瓶 <b>${fmt(s.bare)}</b>（不裝外盒，到貨記成瑕疵、留著分裝）` : '，全部裝盒'}</div>` : ''}
-      ${s.total ? `<div class="calc ${s.remain < 0 ? 'bad' : ''}">${s.remain < 0 ? `正裝要用 ${fmtL(s.used)}，比總量多 ${fmtL(-s.remain)}：減少瓶數或增加公升數` : `正裝用 ${fmtL(s.used)}，剩 ${fmtL(s.remain)} → 針管 <b>${fmt(s.vials)}</b> 支（裝組 ${fmt(s.inSets)}、單支 <b>${fmt(s.singles)}</b>）`}</div>` : '<div class="calc">填總公升數後，會算出剩下的液體可以裝幾支針管</div>'}</div>`).join('');
+  // 每款一張卡：大字是商品名稱和公斤數，下面是算出來的正裝／針管；要改數字點「調整數量」才展開輸入框
+  const card = (s) => { const open = (S.qOpen || {})[s.x.id], w = v[s.x.id] || { direct: 0, consign: 0 };
+    return `<div class="pcard" id="pq-${s.x.id}"><div class="ph"><div class="pnm">${esc(s.x.name)}</div><div class="pkg">${s.total ? (Math.round(s.total / 100) / 10).toLocaleString('en-US') : '—'}<small>kg</small></div></div>
+      <div class="pvel">參考月銷約 ${fmt(w.direct + w.consign)} 瓶（近 30 天店內＋官網 ${w.direct}、${mon}寄售 ${w.consign}）</div>
+      ${s.total && s.remain < 0 ? `<div class="calc bad">正裝要用 ${fmtKg(s.used)}，比總量多 ${fmtKg(-s.remain)}：減少瓶數或增加公斤數</div>` : ''}
+      <div class="pout"><div class="po"><small>正裝 ${C.ml} ml</small><b>${fmt(s.sell)}</b> 瓶<em>${s.sell ? (s.bare ? `裝盒 ${fmt(s.boxed)}・<span class="out-c">裸瓶 ${fmt(s.bare)}</span>` : '全部裝盒') : '還沒填'}</em></div>
+        <div class="po"><small>針管 ${C.vml} ml</small><b>${s.total && s.remain >= 0 ? fmt(s.vials) : '—'}</b> 支<em>${s.total && s.remain >= 0 ? `裝組 ${fmt(s.inSets)}・單支 ${fmt(s.singles)}` : '填公斤數後會算出來'}</em></div></div>
+      ${open ? `<div class="pf3"><label>公斤數${pIn('pq', 'liters:' + s.x.id, q['liters:' + s.x.id])}</label><label>正裝瓶數${pIn('pq', 'sell:' + s.x.id, q['sell:' + s.x.id])}</label><label>其中裸瓶${pIn('pq', 'bare:' + s.x.id, q['bare:' + s.x.id])}</label></div>
+        <small class="lab" style="margin:0">裸瓶＝外盒不夠、不裝盒的瓶數（外盒、外盒貼紙、卡片插畫會少叫）。改完點別處就會存。</small>
+        <button type="button" class="ghost" data-a="qOpen" data-v="${s.x.id}">收起</button>`
+      : `<button type="button" class="pedit" data-a="qOpen" data-v="${s.x.id}">✎ 調整數量</button>`}</div>`; };
+  const scent = C.series.map((g) => { const kg = g.mem.reduce((t, s) => t + s.total, 0);
+    return `<div class="psec"><h3>${esc(g.k.name.replace(/針管組|（.*?）/g, '').trim() || g.k.series)}</h3><span>${fmtKg(kg)}・針管組 ${fmt(g.sets)} 組</span></div><div class="pgrid">${g.mem.map(card).join('')}</div>`; }).join('');
   const series = C.series.map((g) => `<div class="prow col"><div class="pn"><b>${esc(g.k.name)}</b><small>${vel(g.k.id)}</small></div>
       <div class="pf"><label>要裝幾組${pIn('pq', 'set:' + g.k.id, q['set:' + g.k.id])}</label></div>
       <div class="calc ${g.want > g.max ? 'bad' : ''}">一組 ${g.mem.map((s) => esc(s.x.name)).join('、')} 各 ${C.kPer} 支。液體最多可裝 ${fmt(g.max)} 組${g.want > g.max ? `，設定的 ${fmt(g.want)} 組裝不滿，實際 ${fmt(g.sets)} 組` : `，實際裝 <b>${fmt(g.sets)}</b> 組`}</div></div>`).join('');
-  return `<div class="card"><h3 style="margin:0">每款要做多少</h3>
-      <p class="lab" style="margin:0">工廠直接做成可以賣的成品。每款填「總公升數」和「正裝瓶數」；外盒不夠時，在「其中裸瓶」填不裝盒的瓶數（外盒、外盒貼紙、內附卡片和插畫會少叫，玻璃瓶、噴頭、瓶蓋、瓶身貼紙照瓶數叫）。剩下的液體先裝同系列的針管組，再多的做成單支（不裝盒）。改完點別處就會存。</p>${scent}
-      <div class="kv b"><span>合計</span><span>${fmtL(C.totalMl)}・正裝 ${fmt(C.bottles)} 瓶${C.bare ? `（裝盒 ${fmt(C.bottles - C.bare)}、裸瓶 ${fmt(C.bare)}）` : ''}</span></div></div>
+  return `<p class="lab" style="margin:4px 4px 0">工廠直接做成可以賣的成品。每款的液體先裝正裝，剩下的先裝同系列針管組，再多的做成單支（不裝盒）。</p>${scent}
+    <div class="card ptot"><span>合計 <b>${fmtKg(C.totalMl)}</b></span><span>正裝 <b>${fmt(C.bottles)}</b> 瓶${C.bare ? `（裝盒 ${fmt(C.bottles - C.bare)}、裸瓶 ${fmt(C.bare)}）` : ''}</span><span>針管 <b>${fmt(C.vials)}</b> 支（裝組 ${fmt(C.vials - C.singles)}、單支 ${fmt(C.singles)}）</span></div>
     <div class="card"><h3 style="margin:0">針管組</h3><p class="lab" style="margin:0">組數受外盒數量限制，填你要裝的組數。正裝一瓶 ${C.ml} ml、針管一支 ${C.vml} ml（在「成本」頁改）。</p>${series}
       <div class="kv b"><span>合計</span><span>${fmt(C.nSets)} 組・單支 ${fmt(C.singles)} 支・針管共 ${fmt(C.vials)} 支</span></div></div>`;
 }
@@ -1718,6 +1729,7 @@ const H = {
     render(); const el = document.getElementById('adj-' + b.row); if (el) el.scrollIntoView({ block: 'nearest' });
     clearTimeout(S.adjT); S.adjT = setTimeout(() => api({ action: 'prodSet', kind: 'bom', row: b.row, bom: b }).then(() => toast('已存')).catch((er) => toast(er.message)), 700); },
   oview(v){ S.oview = v; render(); },
+  qOpen(v){ S.qOpen = Object.assign({}, S.qOpen || {}); S.qOpen[v] = !S.qOpen[v]; render(); },
   otab(v){ S.otab = v; S.oOpen = null; render(); },
   recNew(v){ const b = S.P.bom.find((x) => String(x.row) === v); S.pay = null; S.recNew = { row: b.row, date: today(), vendor: '', amount: '', note: '' }; render(); },
   recCancel(){ S.recNew = null; render(); },
