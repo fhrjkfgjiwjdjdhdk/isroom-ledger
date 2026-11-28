@@ -761,6 +761,12 @@ function wholeInfo(r){
   return { recs, ordered, pays, paid, pre, line: parts.join('・') || '還沒填金額和廠商' };
 }
 // 叫貨紀錄＋付款紀錄（Esme 叫貨頁、Essen 物料頁共用）
+function payList(r){   // 按數量算的物料：列出帳本裡標第二批、對到這項的付款
+  const W = wholeInfo(r);
+  const pays = W.pays.map((x) => `<div class="rrow"><span class="d">${md(x.date)}</span><span class="v"><b>${esc(x.party || '（沒填廠商）')}</b><small>${esc([x.from, x.note].filter(Boolean).join('・'))}</small></span><span class="a">$${fmt(x.amount)}</span><span></span></div>`).join('');
+  return `<div><p class="lab">付款紀錄（從帳本帶入，標記第二批）</p><div class="rlist">${pays}<div class="rrow tot"><span></span><span>已付</span><span class="a">$${fmt(W.paid)}</span><span></span></div></div>
+    ${r.done ? '' : '<small style="color:var(--sub)">都叫完了，按下面的「✓ 整批已叫」才會收到最下面；「已訂」可以不用填。</small>'}</div>`;
+}
 function recBlock(r, noPay){
   const W = wholeInfo(r), N = S.recNew && S.recNew.row === r.row ? S.recNew : null;
   const recs = W.recs.map((x) => `<div class="rrow"><span class="d">${md(x.date)}</span><span class="v"><b>${esc(x.vendor || '（沒填廠商）')}</b>${x.note ? `<small>${esc(x.note)}</small>` : ''}<button type="button" class="pretg ${x.pre ? 'on' : ''}" data-a="recPre" data-v="${r.row}|${esc(x.id)}">${x.pre ? '✓ 開帳前已付清' : '標成「開帳前已付清」'}</button></span><span class="a">$${fmt(x.amount)}</span><button type="button" class="x" data-a="recDel" data-v="${r.row}|${esc(x.id)}" aria-label="刪除這筆">×</button></div>`).join('');
@@ -794,7 +800,7 @@ function roBom(C){
           : `<button type="button" class="ghost" data-a="oOpen" data-v="${r.row}">看叫貨和付款紀錄</button>`}</div>`; }
     const lines = r.vs ? r.vs : [{ id: '', name: '', need: r.need, have: r.have, stock: r.stock, ordered: r.ordered, todo: r.todo }];
     return `<div class="oitem ${r.done ? 'okrow' : ''}" id="oi-${r.row}">
-      <div class="bt"><b>${esc(r.name)}</b>${r.done ? '<span class="tag g">✓ 夠了</span>' : `<span class="obig">要叫 <b>${fmt(r.todo)}</b></span>`}</div>
+      <div class="bt"><b>${esc(r.name)}</b>${r.called ? '<span class="tag g">✓ 整批已叫</span>' : r.done ? '<span class="tag g">✓ 夠了</span>' : r.spent ? `<span class="tag w">已叫・還沒整批完成</span>` : `<span class="obig">要叫 <b>${fmt(r.todo)}</b></span>`}</div>
       <small>需要 ${fmt(r.need)}（實際用 ${fmt(r.base)}＋備品 ${Math.round(r.rate * 100)}%）${r.boxOnly && C.bare ? '・已扣裸瓶 ' + fmt(C.bare) : ''}${r.vendor ? '・' + esc(r.vendor) : ''}${r.note ? '<br>' + esc(r.note) : ''}</small>
       ${r.vs && !open ? `<div class="ovs">${r.vs.map((v) => `<span>${esc(v.name)}</span><b class="${v.todo ? 'oc' : 'okc'}">${v.todo ? fmt(v.todo) : '✓'}</b>`).join('')}</div>` : ''}
       ${open ? `<div class="otab six"><span class="h"></span><span class="h">需要</span><span class="h">工廠存貨</span><span class="h">現有庫存</span><span class="h">已訂</span><span class="h">要叫</span>
@@ -1055,7 +1061,7 @@ function prodCalc(){
   const variants = (b) => b.split === '款式' ? scent.map((s) => ({ id: s.x.id, name: s.x.name, u: b.use === '每瓶正裝' ? (boxOnly(b) ? s.boxed : s.sell) : b.use === '每支針管' ? s.vials : b.use === '每組針管' ? (series.find((g) => g.k.series === s.x.series) || { sets: 0 }).sets : 0 }))
     : b.split === '系列' ? series.map((g) => ({ id: g.k.id, name: g.k.name.replace('針管組', ''), u: b.use === '每組針管' ? g.sets : b.use === '每支針管' ? g.mem.reduce((t, s) => t + s.vials, 0) : g.mem.reduce((t, s) => t + (boxOnly(b) ? s.boxed : s.sell), 0) })) : null;
   const rows = P.bom.map((b) => {
-    const off = b.status === '不用叫', whole = b.use === '整批';
+    const off = b.status === '不用叫', whole = b.use === '整批', called = !whole && b.status === '已叫完';   // called：按數量算的物料，手動標「整批已叫」
     const rate = b.spare === null || b.spare === undefined || b.spare === '' ? extra : num(b.spare);   // 備品率：每項各自設定，沒填用預設
     // 待訂＝需要 − 工廠存貨 − 現有庫存 − 已訂
     const vs = !whole && b.split ? variants(b).map((v) => { const need = Math.ceil(b.per * v.u * (1 + rate)), have = num((b.hv || {})[v.id]), stock = num((b.sv || {})[v.id]), ordered = num((b.ov || {})[v.id]);
@@ -1066,15 +1072,15 @@ function prodCalc(){
     const stock = whole ? 0 : vs ? vs.reduce((t, v) => t + v.stock, 0) : (b.stock || 0);
     const ordered = vs ? vs.reduce((t, v) => t + v.ordered, 0) : b.ordered;
     const paidLedger = P.purchases.filter((p) => p.bom === b.name).reduce((t, p) => t + p.amount, 0);   // 帳本裡標第二批、對到這項的付款（整批項目要按「整批已叫」才算完成）
-    const todo = off ? 0 : whole ? (ordered >= 1 ? 0 : 1) : vs ? vs.reduce((t, v) => t + v.todo, 0) : Math.max(0, need - have - stock - ordered);
-    const done = !off && todo === 0 && need > 0;
+    const todo = off || called ? 0 : whole ? (ordered >= 1 ? 0 : 1) : vs ? vs.reduce((t, v) => t + v.todo, 0) : Math.max(0, need - have - stock - ordered);
+    const done = !off && (called || (todo === 0 && need > 0));
     const buy = whole ? 1 : vs ? vs.reduce((t, v) => t + Math.max(0, v.need - v.have - v.stock), 0) : Math.max(0, need - have - stock);   // 要買的總量（已訂＋待訂）
     const recSum = (b.rec || []).reduce((t, x) => t + num(x.amount), 0);   // 整批項目有叫貨紀錄就用紀錄合計，沒有才用預估總價
     const cost = whole ? (recSum || paidLedger || num(b.price)) : num(b.price);   // 整批：叫貨紀錄 → 已付金額 → 預估總價
     const budget = off ? 0 : whole ? cost : buy * b.price;
     const prepaid = (b.rec || []).filter((x) => x.pre).reduce((t, x) => t + num(x.amount), 0);   // 開帳前已付清（不在帳本裡）
     const spent = paidLedger + prepaid;
-    return Object.assign({}, b, { boxOnly: boxOnly(b), cost, rate, base, need, have, stock, ordered, todo, done, off, whole, vs, buy, budget, spent, prepaid });
+    return Object.assign({}, b, { called, boxOnly: boxOnly(b), cost, rate, base, need, have, stock, ordered, todo, done, off, whole, vs, buy, budget, spent, prepaid });
   });
   const sum = (use) => rows.filter((r) => r.use === use && !r.off).reduce((t, r) => t + r.price * r.per, 0);
   const batchTotal = rows.filter((r) => r.whole && !r.off).reduce((t, r) => t + r.cost, 0);
@@ -1130,7 +1136,7 @@ const BOM_CARDS = [['共用', '整批的費用，照容量分攤到正裝和針�
 const bomCat = (b) => /原料|香材|酒精|溶劑/.test(b.name) ? '原料香材' : /代工|加工/.test(b.name) ? '外包加工' : /運費|集運|關稅/.test(b.name) ? '收貨運費' : '瓶器包材';
 function prodBom(C){
   const ed = S.bomEdit, od = S.ord;
-  const btns = (r) => `<span class="bbtn">${r.whole && !r.off && !r.done ? `<button type="button" class="chip sq on" data-a="oWhole" data-v="${r.row}|1">✓ 整批已叫</button>` : ''}${r.whole && r.done ? `<button type="button" class="chip sq" data-a="oWhole" data-v="${r.row}|0">改回還沒叫完</button>` : ''}${!r.off && !r.done && od?.row !== r.row && !(r.whole && r.spent) ? `<button type="button" class="chip ${r.whole ? '' : 'on'} sq" data-a="ordOpen" data-v="${r.row}">訂購</button>` : ''}${r.ordered && !(S.pay && S.pay.name === r.name) ? `<button type="button" class="chip sq" data-a="payOpen" data-v="${esc(r.name)}">記付款</button>` : ''}${r.whole || (S.adj && S.adj.row === r.row) ? '' : `<button type="button" class="chip sq" data-a="adjOpen" data-v="${r.row}">＋／−</button>`}<button type="button" class="chip sq" data-a="bomEdit" data-v="${r.row}">編輯</button></span>`;
+  const btns = (r) => `<span class="bbtn">${r.whole && !r.off && !r.done ? `<button type="button" class="chip sq on" data-a="oWhole" data-v="${r.row}|1">✓ 整批已叫</button>` : ''}${r.whole && r.done ? `<button type="button" class="chip sq" data-a="oWhole" data-v="${r.row}|0">改回還沒叫完</button>` : ''}${!r.whole && !r.off && !r.done && r.spent ? `<button type="button" class="chip sq on" data-a="oCalled" data-v="${r.row}|1">✓ 整批已叫</button>` : ''}${r.called ? `<button type="button" class="chip sq" data-a="oCalled" data-v="${r.row}|0">改回還沒叫完</button>` : ''}${!r.off && !r.done && od?.row !== r.row && !r.spent ? `<button type="button" class="chip ${r.whole ? '' : 'on'} sq" data-a="ordOpen" data-v="${r.row}">訂購</button>` : ''}${r.ordered && !(S.pay && S.pay.name === r.name) ? `<button type="button" class="chip sq" data-a="payOpen" data-v="${esc(r.name)}">記付款</button>` : ''}${r.whole || (S.adj && S.adj.row === r.row) ? '' : `<button type="button" class="chip sq" data-a="adjOpen" data-v="${r.row}">＋／−</button>`}<button type="button" class="chip sq" data-a="bomEdit" data-v="${r.row}">編輯</button></span>`;
   const extras = (r) => `${S.adj && S.adj.row === r.row ? adjPanel(r) : ''}${od && od.row === r.row ? orderPanel(r) : ''}${S.pay && S.pay.name === r.name ? payPanel(r) : ''}`;
   // 數量表：需要、待訂是算出來的；工廠存貨、現有庫存、已訂直接填
   const ci = (row, f, vid, val) => `<input type="number" inputmode="numeric" class="pin cin" data-bf="${row}|${f}|${vid || ''}" value="${val || ''}" placeholder="0">`;
@@ -1141,11 +1147,11 @@ function prodBom(C){
   const row = (r) => {
     if (ed === r.row) return `<div id="bom-${r.row}">${bomEditor()}</div>`;
     if (r.off) return `<div class="brow mini okrow" id="bom-${r.row}"><div class="bt"><span><b>✓ ${esc(r.name)}</b>　<small>工廠提供・不用叫</small></span><button type="button" class="chip sq" data-a="bomEdit" data-v="${r.row}">編輯</button></div></div>`;
-    if (r.done && !(S.exp || {})[r.row]) return `<div class="brow mini okrow" id="bom-${r.row}"><div class="bt"><span><b>✓ ${esc(r.name)}</b>　<small>${r.whole ? '整批已叫' + (() => { const v = [...new Set((S.P.purchases || []).filter((p) => p.bom === r.name).map((p) => p.party).filter(Boolean))]; return v.length ? '・' + esc(v.join('、')) : ''; })() : `已足額：需要 ${fmt(r.need)}・工廠存貨 ${fmt(r.have)}・現有庫存 ${fmt(r.stock)}・已訂 ${fmt(r.ordered)}`}${r.spent ? `・已付 $${fmt(r.spent)}` : ''}</small></span><span class="bbtn">${r.ordered && !(S.pay && S.pay.name === r.name) ? `<button type="button" class="chip sq" data-a="payOpen" data-v="${esc(r.name)}">記付款</button>` : ''}<button type="button" class="chip sq" data-a="bomExp" data-v="${r.row}">展開</button></span></div>${extras(r)}</div>`;
+    if (r.done && !(S.exp || {})[r.row]) return `<div class="brow mini okrow" id="bom-${r.row}"><div class="bt"><span><b>✓ ${esc(r.name)}</b>　<small>${r.whole || r.called ? '整批已叫' + (() => { const v = [...new Set((S.P.purchases || []).filter((p) => p.bom === r.name).map((p) => p.party).filter(Boolean))]; return v.length ? '・' + esc(v.join('、')) : ''; })() : `已足額：需要 ${fmt(r.need)}・工廠存貨 ${fmt(r.have)}・現有庫存 ${fmt(r.stock)}・已訂 ${fmt(r.ordered)}`}${r.spent ? `・已付 $${fmt(r.spent)}` : ''}</small></span><span class="bbtn">${r.ordered && !(S.pay && S.pay.name === r.name) ? `<button type="button" class="chip sq" data-a="payOpen" data-v="${esc(r.name)}">記付款</button>` : ''}<button type="button" class="chip sq" data-a="bomExp" data-v="${r.row}">展開</button></span></div>${extras(r)}</div>`;
     return `<div class="brow" id="bom-${r.row}">
-      <div class="bt"><b>${esc(r.name)}</b>${r.done ? `<span class="bbtn"><span class="tag g">✓ ${r.whole ? '整批已叫' : '已足額'}</span><button type="button" class="chip sq" data-a="bomExp" data-v="${r.row}">收起</button></span>` : `<span class="tag w">${r.whole ? (r.spent ? '已叫・還沒整批完成' : '待訂') : '待訂 ' + fmt(r.todo)}</span>`}</div>
+      <div class="bt"><b>${esc(r.name)}</b>${r.done ? `<span class="bbtn"><span class="tag g">✓ ${r.whole || r.called ? '整批已叫' : '已足額'}</span><button type="button" class="chip sq" data-a="bomExp" data-v="${r.row}">收起</button></span>` : `<span class="tag w">${r.spent ? '已叫・還沒整批完成' : r.whole ? '待訂' : '待訂 ' + fmt(r.todo)}</span>`}</div>
       <small>${r.use}${r.boxOnly && C.bare ? '（只算裝盒的，扣掉裸瓶 ' + fmt(C.bare) + '）' : ''}${r.whole ? '' : ' × ' + r.per + '・備品 ' + Math.round(r.rate * 100) + '%'}${r.split ? (r.split === '款式' ? '・六款各自' : '・兩個系列各自') : ''}${r.vendor ? '・' + esc(r.vendor) : ''}${r.moq ? '・最低 ' + esc(r.moq) : ''}${r.note ? '<br>' + esc(r.note) : ''}</small>
-      ${r.whole ? `<div class="ofill" style="gap:8px">${recBlock(r, true)}</div>` : qtab(r)}
+      ${r.whole ? `<div class="ofill" style="gap:8px">${recBlock(r, true)}</div>` : qtab(r) + (r.spent ? `<div class="ofill" style="gap:8px">${payList(r)}</div>` : '')}
       <div class="bprice"><label>${r.whole ? '整批總價（含運）' : '單價（含運）'}<span class="pfx">$</span>${pIn('bp', String(r.row), r.price || '', 110)}</label>${r.whole ? '' : `<span>× ${fmt(r.buy)} ＝ 預算 <b>$${fmt(r.budget)}</b></span>`}</div>${r.whole && !num(r.price) && r.spent && !(r.rec || []).length ? `<small style="color:var(--sub)">總價沒填，成本先用已付 $${fmt(r.cost)} 算。</small>` : ''}${!r.whole && !r.off && !num(r.price) && (r.have || r.stock) ? '<small class="warn">已經有庫存的也要填單價，不然每瓶成本會少算這一項。找不到當初的價格，就填這次的報價或市價。</small>' : ''}
       <div class="bn">${r.spent ? `<span>已付 <b>$${fmt(r.spent)}</b></span>` : '<span></span>'}${btns(r)}</div>
       ${extras(r)}</div>`; };
@@ -1747,6 +1753,8 @@ const H = {
     const keep = b.rec; b.rec = b.rec.filter((y) => y.id !== id); render();
     try { await api({ action: 'prodSet', kind: 'bom', row: b.row, bom: b }); toast('已刪除'); } catch(e){ b.rec = keep; toast(e.message); render(); } },
   oOpen(v){ S.recNew = null; S.pay = null; S.oOpen = v ? Number(v) : null; render(); if (v) { const el = document.getElementById('oi-' + v); if (el) el.scrollIntoView({ block: 'nearest' }); } },
+  oCalled(v){ const [row, on] = v.split('|'); const b = S.P.bom.find((x) => String(x.row) === row); if (!b) return; b.status = Number(on) ? '已叫完' : ''; S.exp = Object.assign({}, S.exp || {}); delete S.exp[b.row]; render();
+    api({ action: 'prodSet', kind: 'bom', row: b.row, bom: b }).then(() => toast(Number(on) ? '已標成整批已叫，收到最下面' : '已改回還沒叫完')).catch((er) => toast(er.message)); },
   oWhole(v){ const [row, on] = v.split('|'); const b = S.P.bom.find((x) => String(x.row) === row); if (!b) return; b.ordered = Number(on); S.exp = Object.assign({}, S.exp || {}); delete S.exp[b.row]; render();
     api({ action: 'prodSet', kind: 'bom', row: b.row, bom: b }).then(() => toast(Number(on) ? '已標成整批已叫，收到最下面' : '已改回還沒叫完')).catch((er) => toast(er.message)); },
   bview(v){ S.bview = v; S.adj = null; S.bomEdit = null; S.ord = null; S.pay = null; render(); },
